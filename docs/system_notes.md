@@ -141,45 +141,86 @@ Properties:
 
 This provides a **continuous confidence signal** without ML.
 
+## Policy Layer (What the System Allows)
+
+The supervisor converts reliability into **clear policy states**:
+
+| Reliability Range | Policy State        | Meaning |
+|------------------|---------------------|--------|
+| `≥ 0.7`          | `VISION_ALLOWED`    | Vision can be used |
+| `0.3 – 0.7`      | `VISION_DEGRADED`   | Use with caution |
+| `< 0.3`          | `VISION_BLOCKED`    | Do not use vision |
+
+Policy changes are:
+- logged explicitly
+- rare
+- explainable
+
+## Data Logging (Evidence Generation)
+
+The system records its internal state to disk for analysis.
+
+Logged fields:
+- timestamp
+- vision reliability
+- policy state
+
+Format:
+- CSV file
+- Written by the supervisor
+- One row per update
+
+Purpose:
+- enables plotting
+- enables experiment comparison
+- provides hard evidence of system behavior
+
 ---
 
-## System Properties Achieved
+## Verified Behavior (Observed in Experiments)
 
-- Explicit failure detection
-- Observable system state
-- Temporal stability
-- Edge-triggered supervision
-- Continuous reliability estimation
-- Clear separation of concerns
+Experiments confirm that the system:
 
-At this stage, the system can:
-> explain *what went wrong*, *for how long*, and *how bad it is*.
+- Gradually loses trust under sustained vision failure
+- Enters a degraded warning state before blocking vision
+- Fully blocks vision when reliability is too low
+- Does not recover unless vision actually improves
+- Recovers slowly and cautiously when input stabilizes
+
+These behaviors were validated using logged data.
 
 ---
 
-## Current Status
+## Current Project Status
 
 ### Implemented
-- ROS image input pipeline
 - Vision failure detection
-- Vision status publishing
 - Temporal supervision
-- Reliability score tracking
+- Continuous reliability estimation
+- Policy gating
+- Reliability publishing as ROS topic
+- CSV data logging
 
-### Not Implemented (Intentional)
-- ML models
+### Intentionally Not Implemented (Yet)
+- Machine learning models
 - Learned uncertainty
 - Robot control actions
-- Dataset recording
+- Dataset replay or training
 
 These are postponed to preserve clarity and correctness.
 
 ---
 
-## Design Philosophy (Non-Negotiable)
+## Design Principles (Non-Negotiable)
 
 - Failure awareness before accuracy
+- Systems thinking before ML
 - Explicit state over implicit behavior
-- Time-aware decisions
-- Interpretability over complexity
-- Systems before models
+- Time-based reasoning
+- Honest confidence signals
+
+---
+
+## Summary (Non-Technical)
+
+> The system watches the camera, slowly loses trust if the image becomes unreliable, warns early, blocks vision when necessary, and records everything so the decisions can be explained later.

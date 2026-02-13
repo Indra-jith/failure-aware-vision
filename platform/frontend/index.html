@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description"
+    content="Failure-Aware Vision Trust Visualization — Interactive research simulator for temporal trust dynamics with bounded ML influence.">
+  <title>Vision Trust Simulator — Failure-Aware Research Platform</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+</head>
+
+<body>
+
+  <!-- Particle background -->
+  <canvas id="particleCanvas"></canvas>
+
+  <!-- Hero Landing Section -->
+  <section id="hero" class="hero-section">
+    <!-- Animated gradient background (pure CSS) -->
+    <div class="hero-gradient"></div>
+
+    <!-- Hero Content -->
+    <div class="hero-content">
+      <div class="hero-badge">Research Platform</div>
+      <h1 class="hero-title">
+        <span class="hero-title-main">Failure-Aware</span>
+        <span class="hero-title-sub">Vision Trust</span>
+      </h1>
+      <p class="hero-description">
+        Interactive temporal trust engine with bounded ML influence.<br>
+        Simulates vision reliability, anomaly scoring, and deterministic policy gating.
+      </p>
+      <button class="hero-cta" onclick="scrollToSimulator()">
+        <span>Start Exploring</span>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M7 13l5 5 5-5M7 6l5 5 5-5" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Scroll indicator -->
+    <div class="scroll-indicator">
+      <div class="scroll-mouse"></div>
+    </div>
+  </section>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <a href="/" class="nav-brand">
+      <div class="nav-brand-icon">FV</div>
+      <span class="nav-brand-text">Vision Trust</span>
+      <span class="nav-brand-sub">Research Platform</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="/" class="active">⚡ Simulator</a></li>
+      <li><a href="/architecture">◈ Architecture</a></li>
+      <li><a href="/playground">⬡ Playground</a></li>
+    </ul>
+    <div class="nav-status">
+      <div class="status-dot disconnected" id="wsStatusDot"></div>
+      <span id="wsStatusText" style="color: var(--text-tertiary);">Disconnected</span>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content" id="simulator">
+
+    <div class="page-header">
+      <h1>Trust Simulator</h1>
+      <p>Interactive temporal trust engine with bounded ML influence and deterministic policy gating. Simulates the full
+        vision reliability pipeline in real-time.</p>
+    </div>
+
+    <!-- Preset scenarios -->
+    <div class="scenario-bar">
+      <button class="scenario-btn" onclick="runScenario('normal')">🟢 Normal Operation</button>
+      <button class="scenario-btn" onclick="runScenario('freeze')">🟡 Freeze Attack</button>
+      <button class="scenario-btn" onclick="runScenario('degrade')">🔴 Progressive Degradation</button>
+      <button class="scenario-btn" onclick="runScenario('recovery')">🔵 Recovery Sequence</button>
+      <button class="scenario-btn" onclick="runScenario('ml_stress')">🟣 ML Stress Test</button>
+    </div>
+
+    <div class="simulator-grid">
+
+      <!-- Left: Control Panel -->
+      <div class="control-panel glass-panel">
+        <div class="panel-header">
+          <div class="panel-title"><span class="icon">🎥</span> Vision Simulation</div>
+        </div>
+
+        <!-- Vision canvas -->
+        <div class="vision-canvas-wrap">
+          <canvas id="visionCanvas" width="320" height="240"></canvas>
+          <div class="vision-status-badge ok" id="visionBadge">VISION_OK</div>
+        </div>
+
+        <!-- Mode buttons -->
+        <div class="control-group">
+          <div class="control-label">Failure Mode</div>
+          <div class="mode-buttons">
+            <button class="mode-btn active" data-mode="normal" onclick="setMode('normal', this)">✓ Normal</button>
+            <button class="mode-btn frozen" data-mode="frozen" onclick="setMode('frozen', this)">⏸ Freeze</button>
+            <button class="mode-btn blank" data-mode="blank" onclick="setMode('blank', this)">◻ Blank</button>
+            <button class="mode-btn corrupted" data-mode="corrupted" onclick="setMode('corrupted', this)">⚠
+              Corrupt</button>
+          </div>
+        </div>
+
+        <!-- Noise slider -->
+        <div class="control-group">
+          <div class="slider-group">
+            <div class="slider-header">
+              <span class="slider-label">Gaussian Noise</span>
+              <span class="slider-value" id="noiseValue">0.00</span>
+            </div>
+            <input type="range" id="noiseSlider" min="0" max="100" value="0" oninput="setNoise(this.value)">
+          </div>
+
+          <div class="slider-group">
+            <div class="slider-header">
+              <span class="slider-label">Brightness</span>
+              <span class="slider-value" id="brightnessValue">0.50</span>
+            </div>
+            <input type="range" id="brightnessSlider" min="0" max="100" value="50" oninput="setBrightness(this.value)">
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="action-bar">
+          <button class="action-btn danger" onclick="resetSimulation()">↺ Reset</button>
+          <button class="action-btn primary" onclick="downloadLog()">↓ CSV</button>
+        </div>
+      </div>
+
+      <!-- Top right: Dashboard -->
+      <div class="dashboard-panel glass-panel">
+        <div class="panel-header">
+          <div class="panel-title"><span class="icon">📊</span> Live Trust Dashboard</div>
+          <div id="policyBadge" class="policy-badge allowed">● ALLOWED</div>
+        </div>
+
+        <div class="dashboard-grid">
+          <!-- Gauge -->
+          <div class="gauge-container">
+            <canvas id="reliabilityGauge" width="180" height="180"></canvas>
+            <div class="gauge-label">Reliability Index</div>
+          </div>
+
+          <!-- Metrics -->
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <div class="metric-label">Reliability</div>
+              <div class="metric-value cyan" id="metricReliability">1.000</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Anomaly Score</div>
+              <div class="metric-value" id="metricAnomaly">0.000</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Anomaly Integral</div>
+              <div class="metric-value" id="metricIntegral">0.000</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Decay Coefficient</div>
+              <div class="metric-value" id="metricDecay">-0.10</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Recovery Rate</div>
+              <div class="metric-value" id="metricRecovery">0.10</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Vision State</div>
+              <div class="metric-value green" id="metricVision">OK</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">ML Influence</div>
+              <div class="ml-indicator active" id="metricML">● ACTIVE</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">Tick Count</div>
+              <div class="metric-value" id="metricTick">0</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom right: Charts -->
+      <div class="chart-panel glass-panel">
+        <div class="panel-header">
+          <div class="panel-title"><span class="icon">📈</span> Time-Series</div>
+          <div class="chart-controls">
+            <button class="chart-btn active" onclick="setChartView('both', this)">All</button>
+            <button class="chart-btn" onclick="setChartView('reliability', this)">Reliability</button>
+            <button class="chart-btn" onclick="setChartView('anomaly', this)">Anomaly</button>
+          </div>
+        </div>
+        <div class="chart-container">
+          <canvas id="timeSeriesChart"></canvas>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <script src="/js/particles.js"></script>
+  <script src="/js/gauge.js"></script>
+  <script src="/js/charts.js"></script>
+  <script src="/js/ws.js"></script>
+  <script src="/js/app.js"></script>
+
+</body>
+
+</html>

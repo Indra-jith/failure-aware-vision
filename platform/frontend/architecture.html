@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="Architecture visualization of the Failure-Aware Vision Trust pipeline — from sensor input to policy gating.">
+    <title>Architecture — Vision Trust Platform</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+
+<body>
+
+    <!-- Particle background -->
+    <canvas id="particleCanvas"></canvas>
+
+    <nav class="nav">
+        <a href="/" class="nav-brand">
+            <div class="nav-brand-icon">FV</div>
+            <span class="nav-brand-text">Vision Trust</span>
+            <span class="nav-brand-sub">Research Platform</span>
+        </a>
+        <ul class="nav-links">
+            <li><a href="/">⚡ Simulator</a></li>
+            <li><a href="/architecture" class="active">◈ Architecture</a></li>
+            <li><a href="/playground">⬡ Playground</a></li>
+        </ul>
+        <div class="nav-status">
+            <span style="color: var(--text-tertiary); font-size: 0.75rem;">Architecture View</span>
+        </div>
+    </nav>
+
+    <main class="main-content">
+
+        <div class="page-header">
+            <h1>System Architecture</h1>
+            <p>Interactive pipeline diagram of the failure-aware vision trust system. Click any node to view its
+                concept, logic, and mapping to the original ROS2 implementation.</p>
+        </div>
+
+        <div style="display: flex; gap: 2rem; align-items: flex-start;">
+
+            <!-- Pipeline -->
+            <div class="pipeline-container" style="flex-shrink: 0;">
+                <div class="pipeline-node" data-node="input" onclick="showDetail('input')">
+                    <div class="pipeline-node-title">📷 User Input</div>
+                    <div class="pipeline-node-sub">Sensor / Simulation Source</div>
+                </div>
+                <div class="pipeline-arrow"></div>
+
+                <div class="pipeline-node" data-node="vision" onclick="showDetail('vision')">
+                    <div class="pipeline-node-title">🎥 Vision Simulation</div>
+                    <div class="pipeline-node-sub">Frame Generation + Injection</div>
+                </div>
+                <div class="pipeline-arrow"></div>
+
+                <div class="pipeline-node" data-node="rule" onclick="showDetail('rule')">
+                    <div class="pipeline-node-title">🔍 Rule-Based Detector</div>
+                    <div class="pipeline-node-sub">image_subscriber.py</div>
+                </div>
+                <div class="pipeline-arrow"></div>
+
+                <div class="pipeline-node" data-node="ml" onclick="showDetail('ml')">
+                    <div class="pipeline-node-title">🧠 ML Anomaly Model</div>
+                    <div class="pipeline-node-sub">Autoencoder MSE</div>
+                </div>
+                <div class="pipeline-arrow"></div>
+
+                <div class="pipeline-node" data-node="trust" onclick="showDetail('trust')">
+                    <div class="pipeline-node-title">⚖️ Temporal Trust Engine</div>
+                    <div class="pipeline-node-sub">vision_supervisor.py</div>
+                </div>
+                <div class="pipeline-arrow"></div>
+
+                <div class="pipeline-node" data-node="policy" onclick="showDetail('policy')">
+                    <div class="pipeline-node-title">🚦 Policy Gating</div>
+                    <div class="pipeline-node-sub">vision_control_guard.py</div>
+                </div>
+                <div class="pipeline-arrow"></div>
+
+                <div class="pipeline-node" data-node="logger" onclick="showDetail('logger')">
+                    <div class="pipeline-node-title">📝 Session Logger</div>
+                    <div class="pipeline-node-sub">vision_reliability_log.csv</div>
+                </div>
+            </div>
+
+            <!-- Detail Panel -->
+            <div id="detailPanel" class="detail-panel glass-panel" style="flex: 1; min-width: 0;">
+                <div id="detailContent">
+                    <div style="text-align: center; padding: 3rem 1rem; color: var(--text-tertiary);">
+                        <div style="font-size: 2rem; margin-bottom: 0.75rem;">←</div>
+                        <p style="font-size: 0.85rem;">Click any pipeline node to view its details, logic, and ROS2
+                            mapping.</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <script src="/js/particles.js"></script>
+    <script src="/js/architecture.js"></script>
+
+</body>
+
+</html>

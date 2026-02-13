@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="ML Playground — simulate anomaly scoring, compare frames, and observe trust evolution from video input.">
+    <title>ML Playground — Vision Trust Platform</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+</head>
+
+<body>
+
+    <!-- Particle background -->
+    <canvas id="particleCanvas"></canvas>
+
+    <nav class="nav">
+        <a href="/" class="nav-brand">
+            <div class="nav-brand-icon">FV</div>
+            <span class="nav-brand-text">Vision Trust</span>
+            <span class="nav-brand-sub">Research Platform</span>
+        </a>
+        <ul class="nav-links">
+            <li><a href="/">⚡ Simulator</a></li>
+            <li><a href="/architecture">◈ Architecture</a></li>
+            <li><a href="/playground" class="active">⬡ Playground</a></li>
+        </ul>
+        <div class="nav-status">
+            <div class="status-dot disconnected" id="pgWsDot"></div>
+            <span id="pgWsText" style="color: var(--text-tertiary);">Disconnected</span>
+        </div>
+    </nav>
+
+    <main class="main-content">
+
+        <div class="page-header">
+            <h1>ML Playground</h1>
+            <p>Upload a video to simulate anomaly scoring, compare raw vs reconstructed frames, and observe trust
+                evolution through the temporal trust engine. Uses heuristic proxy — no PyTorch required.</p>
+        </div>
+
+        <div class="playground-grid">
+
+            <!-- Left: Upload & Frame Comparison -->
+            <div>
+                <!-- Upload zone -->
+                <div class="glass-panel" style="margin-bottom: 1.25rem;">
+                    <div class="panel-header">
+                        <div class="panel-title"><span class="icon">📤</span> Video Input</div>
+                    </div>
+                    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('videoInput').click()">
+                        <div class="upload-icon">🎬</div>
+                        <div class="upload-text">Click or drop a video file</div>
+                        <div class="upload-sub">Supports MP4, WebM, AVI — max 50MB</div>
+                    </div>
+                    <input type="file" id="videoInput" accept="video/*" style="display:none;"
+                        onchange="handleVideoUpload(event)">
+
+                    <!-- Video playback (hidden until loaded) -->
+                    <video id="videoPlayer"
+                        style="display:none; width:100%; border-radius:var(--radius-sm); margin-top:1rem;"
+                        muted></video>
+
+                    <!-- Sequence builder -->
+                    <div style="margin-top: 1.25rem;">
+                        <div class="control-label">Or: Build a Simulated Sequence</div>
+                        <div class="scenario-bar" style="margin-top: 0.5rem;">
+                            <button class="scenario-btn" onclick="buildSequence('normal_stable')">🟢 Stable
+                                (5s)</button>
+                            <button class="scenario-btn" onclick="buildSequence('gradual_decay')">📉 Gradual
+                                Decay</button>
+                            <button class="scenario-btn" onclick="buildSequence('freeze_recovery')">🔄 Freeze →
+                                Recover</button>
+                            <button class="scenario-btn" onclick="buildSequence('full_cycle')">🔁 Full Cycle</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Frame comparison -->
+                <div class="glass-panel">
+                    <div class="panel-header">
+                        <div class="panel-title"><span class="icon">🔬</span> Frame Comparison</div>
+                        <span
+                            style="font-size: 0.7rem; color: var(--text-tertiary); font-family: var(--font-mono);">Frame
+                            <span id="currentFrameNum">0</span></span>
+                    </div>
+                    <div class="frame-comparison">
+                        <div class="frame-box">
+                            <canvas id="rawFrameCanvas" width="256" height="192"></canvas>
+                            <div class="frame-box-label">Raw Input</div>
+                        </div>
+                        <div class="frame-box">
+                            <canvas id="reconFrameCanvas" width="256" height="192"></canvas>
+                            <div class="frame-box-label">Reconstructed (Simulated)</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 1rem; text-align: center;">
+                        <div class="metric-label">Reconstruction Error (Anomaly Score)</div>
+                        <div class="metric-value magenta" id="pgAnomalyScore" style="font-size: 1.3rem;">0.000000</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Trust Evolution Charts -->
+            <div>
+                <!-- Evolution chart -->
+                <div class="glass-panel" style="margin-bottom: 1.25rem;">
+                    <div class="panel-header">
+                        <div class="panel-title"><span class="icon">📈</span> Trust Evolution</div>
+                    </div>
+                    <div class="chart-container" style="height: 220px;">
+                        <canvas id="pgReliabilityChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Anomaly chart -->
+                <div class="glass-panel" style="margin-bottom: 1.25rem;">
+                    <div class="panel-header">
+                        <div class="panel-title"><span class="icon">⚡</span> Anomaly Score</div>
+                    </div>
+                    <div class="chart-container" style="height: 180px;">
+                        <canvas id="pgAnomalyChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Results summary -->
+                <div class="glass-panel">
+                    <div class="panel-header">
+                        <div class="panel-title"><span class="icon">📊</span> Session Summary</div>
+                    </div>
+                    <div class="metrics-grid">
+                        <div class="metric-card">
+                            <div class="metric-label">Total Frames</div>
+                            <div class="metric-value" id="pgTotalFrames">0</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Final Reliability</div>
+                            <div class="metric-value cyan" id="pgFinalReliability">1.000</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Min Reliability</div>
+                            <div class="metric-value red" id="pgMinReliability">1.000</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Mean Anomaly</div>
+                            <div class="metric-value magenta" id="pgMeanAnomaly">0.000</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Policy Changes</div>
+                            <div class="metric-value" id="pgPolicyChanges">0</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-label">Time Blocked</div>
+                            <div class="metric-value red" id="pgTimeBlocked">0.0s</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script src="/js/particles.js"></script>
+    <script src="/js/ws.js"></script>
+    <script src="/js/playground.js"></script>
+
+</body>
+
+</html>

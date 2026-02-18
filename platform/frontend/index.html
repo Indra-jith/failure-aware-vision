@@ -4,17 +4,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <style>#particleCanvas{display:none!important;position:absolute!important;width:0!important;height:0!important;visibility:hidden!important;}</style>
   <meta name="description"
     content="Failure-Aware Vision Trust Visualization — Interactive research simulator for temporal trust dynamics with bounded ML influence.">
   <title>Vision Trust Simulator — Failure-Aware Research Platform</title>
-  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/style.css?v=4">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 </head>
 
 <body>
-
-  <!-- Particle background -->
-  <canvas id="particleCanvas"></canvas>
 
   <!-- Hero Landing Section -->
   <section id="hero" class="hero-section">
@@ -204,7 +205,6 @@
     </div>
   </main>
 
-  <script src="/js/particles.js"></script>
   <script src="/js/gauge.js"></script>
   <script src="/js/charts.js"></script>
   <script src="/js/ws.js"></script>

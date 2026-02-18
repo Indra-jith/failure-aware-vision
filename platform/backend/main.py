@@ -7,6 +7,7 @@ for real-time trust state streaming.
 
 import asyncio
 import json
+import os
 import time
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -21,27 +22,34 @@ from session_logger import SessionLogger
 
 app = FastAPI(title="Vision Trust Platform", version="1.0.0")
 
+# Frontend path: always relative to this script, so it works no matter where the server is started from
+_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+_FRONTEND_DIR = os.path.normpath(os.path.join(_BASE_DIR, "..", "frontend"))
+
 # Serve frontend static files
-app.mount("/css", StaticFiles(directory="../frontend/css"), name="css")
-app.mount("/js", StaticFiles(directory="../frontend/js"), name="js")
-app.mount("/assets", StaticFiles(directory="../frontend/assets"), name="assets")
+app.mount("/css", StaticFiles(directory=os.path.join(_FRONTEND_DIR, "css")), name="css")
+app.mount("/js", StaticFiles(directory=os.path.join(_FRONTEND_DIR, "js")), name="js")
+app.mount("/assets", StaticFiles(directory=os.path.join(_FRONTEND_DIR, "assets")), name="assets")
 
 
 # ── Static page routes ──
 
 @app.get("/", response_class=HTMLResponse)
 async def serve_index():
-    return FileResponse("../frontend/index.html")
+    r = FileResponse(os.path.join(_FRONTEND_DIR, "index.html"))
+    r.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+    r.headers["Pragma"] = "no-cache"
+    return r
 
 
 @app.get("/architecture", response_class=HTMLResponse)
 async def serve_architecture():
-    return FileResponse("../frontend/architecture.html")
+    return FileResponse(os.path.join(_FRONTEND_DIR, "architecture.html"))
 
 
 @app.get("/playground", response_class=HTMLResponse)
 async def serve_playground():
-    return FileResponse("../frontend/playground.html")
+    return FileResponse(os.path.join(_FRONTEND_DIR, "playground.html"))
 
 
 # ── Health check ──

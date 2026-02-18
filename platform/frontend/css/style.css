@@ -67,6 +67,16 @@ body {
   position: relative;
 }
 
+/* Hide particle canvas everywhere — no space, not visible (handles cached HTML) */
+#particleCanvas {
+  display: none !important;
+  position: absolute !important;
+  width: 0 !important;
+  height: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
 /* Animated grid background */
 body::before {
   content: '';

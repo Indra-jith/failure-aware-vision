@@ -19,6 +19,7 @@ from trust_engine import TrustEngine
 from vision_simulator import VisionSimulator
 from anomaly_simulator import AnomalySimulator
 from session_logger import SessionLogger
+from failure_attributor import FailureAttributor
 
 app = FastAPI(title="Vision Trust Platform", version="1.0.0")
 
@@ -70,7 +71,10 @@ async def websocket_endpoint(ws: WebSocket):
     vision = VisionSimulator()
     anomaly = AnomalySimulator(seed=42)
     logger = SessionLogger()
+    attributor = FailureAttributor()
 
+    # tick_rate is read each iteration by simulation_loop (closure); safe
+    # because only the receive-loop mutates it and asyncio is single-threaded.
     tick_rate = 30  # Hz
     running = True
     last_time = time.time()
@@ -94,6 +98,10 @@ async def websocket_endpoint(ws: WebSocket):
             state['anomaly_score'] = round(anomaly_score, 6)
             state['dt'] = round(dt, 6)
             state['frame'] = frame_info
+
+            # Failure attribution
+            attributor.update(state, state['timestamp'])
+            state['failure_events'] = attributor.get_summary()
 
             # Log
             logger.log(state, anomaly_score)
@@ -133,6 +141,7 @@ async def websocket_endpoint(ws: WebSocket):
                 vision.reset()
                 anomaly.reset(seed=42)
                 logger.reset()
+                attributor.reset()
                 last_time = time.time()
 
             elif action == 'set_tick_rate':
@@ -143,7 +152,9 @@ async def websocket_endpoint(ws: WebSocket):
                 await ws.send_json({
                     'type': 'log_data',
                     'csv': csv_data,
+                    'failure_csv': attributor.get_events_csv(),
                     'entries': logger.entry_count,
+                    'failure_summary': attributor.get_summary(),
                 })
 
     except WebSocketDisconnect:

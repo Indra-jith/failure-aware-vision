@@ -15,6 +15,8 @@ class SessionLogger:
     HEADER = [
         'timestamp', 'reliability', 'policy_state',
         'anomaly', 'anomaly_integral', 'vision_status',
+        'trust_velocity', 'recovery_debt', 'recovery_coeff',
+        'contradiction_detected', 'contradiction_count',
     ]
 
     def __init__(self):
@@ -36,6 +38,11 @@ class SessionLogger:
             f"{anomaly_score:.6f}",
             f"{state.get('anomaly_integral', 0):.6f}",
             state.get('vision_status', ''),
+            f"{state.get('trust_velocity', 0):.6f}",
+            f"{state.get('recovery_debt', 0):.4f}",
+            f"{state.get('recovery_coeff', 0.10):.4f}",
+            state.get('contradiction_detected', False),
+            state.get('contradiction_count', 0),
         ])
         self._count += 1
 

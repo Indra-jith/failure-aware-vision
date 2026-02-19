@@ -63,7 +63,10 @@ class AnomalySimulator:
             # Frozen frames: error drops as reconstruction converges
             return max(0.001, base * 0.5 + temporal_drift)
         elif vision_status == 'VISION_BLANK':
-            # Blank frames: very low reconstruction error (blank ≈ blank)
+            # Blank frames have low reconstruction error because the autoencoder
+            # was trained on normal lit frames — a uniformly dark frame is
+            # "easy to reconstruct as dark". This is a known limitation:
+            # the rule-based detector catches blank frames; ML cannot.
             return max(0.001, 0.005 + self._rng.gauss(0, 0.001))
         elif vision_status == 'VISION_CORRUPTED':
             # Corrupted: high reconstruction error

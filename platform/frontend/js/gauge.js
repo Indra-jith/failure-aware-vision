@@ -99,5 +99,14 @@ class ReliabilityGauge {
     ctx.strokeStyle = color + '30';
     ctx.lineWidth = 1;
     ctx.stroke();
+
+    // Label text
+    const labelX = cx + (outerR + 6) * Math.cos(angle);
+    const labelY = cy + (outerR + 6) * Math.sin(angle);
+    ctx.fillStyle = color + '80';
+    ctx.font = '500 8px "Inter", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(threshold === 0.7 ? '0.7' : '0.3', labelX, labelY);
   }
 }

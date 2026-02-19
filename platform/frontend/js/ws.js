@@ -10,10 +10,12 @@ class TrustWebSocket {
         this.reconnectDelay = 1000;
         this.maxReconnectDelay = 10000;
         this.connected = false;
+        this._intentionalClose = false;
         this.connect();
     }
 
     connect() {
+        this._intentionalClose = false;
         try {
             this.ws = new WebSocket(this.url);
 
@@ -48,6 +50,7 @@ class TrustWebSocket {
     }
 
     _reconnect() {
+        if (this._intentionalClose) return;
         setTimeout(() => {
             this.reconnectDelay = Math.min(this.reconnectDelay * 1.5, this.maxReconnectDelay);
             this.connect();
@@ -61,6 +64,7 @@ class TrustWebSocket {
     }
 
     close() {
+        this._intentionalClose = true;
         if (this.ws) {
             this.ws.close();
         }

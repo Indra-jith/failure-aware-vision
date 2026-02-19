@@ -66,6 +66,40 @@ class TrustChart {
                         bodyFont: { family: "'JetBrains Mono', monospace", size: 11 },
                         padding: 10,
                     },
+                    annotation: {
+                        annotations: {
+                            threshold70: {
+                                type: 'line',
+                                yMin: 0.7, yMax: 0.7,
+                                yScaleID: 'y',
+                                borderColor: 'rgba(0,255,136,0.2)',
+                                borderWidth: 1,
+                                borderDash: [4, 4],
+                                label: {
+                                    display: true,
+                                    content: 'ALLOWED',
+                                    color: 'rgba(0,255,136,0.4)',
+                                    font: { size: 9 },
+                                    position: 'start',
+                                }
+                            },
+                            threshold30: {
+                                type: 'line',
+                                yMin: 0.3, yMax: 0.3,
+                                yScaleID: 'y',
+                                borderColor: 'rgba(255,51,85,0.2)',
+                                borderWidth: 1,
+                                borderDash: [4, 4],
+                                label: {
+                                    display: true,
+                                    content: 'BLOCKED',
+                                    color: 'rgba(255,51,85,0.4)',
+                                    font: { size: 9 },
+                                    position: 'start',
+                                }
+                            }
+                        }
+                    },
                 },
                 scales: {
                     x: {

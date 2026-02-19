@@ -8,29 +8,42 @@
         content="Architecture visualization of the Failure-Aware Vision Trust pipeline — from sensor input to policy gating.">
     <title>Architecture — Vision Trust Platform</title>
     <link rel="stylesheet" href="/css/style.css">
+    <script src="/js/three.min.js"></script>
 </head>
 
 <body>
 
-    <nav class="nav">
-        <a href="/" class="nav-brand">
-            <div class="nav-brand-icon">FV</div>
+    <!-- Floating lines background (fixed, behind all content) -->
+    <div id="floatingLinesBg" class="page-floating-bg"></div>
+
+    <nav class="nav" role="navigation" aria-label="Main navigation">
+        <a href="/" class="nav-brand" aria-label="Vision Trust — Home">
+            <div class="nav-brand-icon" aria-hidden="true">FV</div>
             <span class="nav-brand-text">Vision Trust</span>
             <span class="nav-brand-sub">Research Platform</span>
         </a>
-        <ul class="nav-links">
-            <li><a href="/">⚡ Simulator</a></li>
-            <li><a href="/architecture" class="active">◈ Architecture</a></li>
-            <li><a href="/playground">⬡ Playground</a></li>
+
+        <button class="nav-hamburger" id="navHamburger" aria-label="Toggle menu" aria-expanded="false"
+            aria-controls="navLinks">
+            <span></span><span></span><span></span>
+        </button>
+
+        <ul class="nav-links" id="navLinks" role="list">
+            <li><a href="/" class="nav-link"><span class="nav-icon" aria-hidden="true">⚡</span> Simulator</a></li>
+            <li><a href="/architecture" class="nav-link active" aria-current="page"><span class="nav-icon"
+                        aria-hidden="true">◈</span> Architecture</a></li>
+            <li><a href="/playground" class="nav-link"><span class="nav-icon" aria-hidden="true">⬡</span> Playground</a>
+            </li>
         </ul>
-        <div class="nav-status">
-            <span style="color: var(--text-tertiary); font-size: 0.75rem;">Architecture View</span>
+
+        <div class="nav-actions">
+            <span class="nav-context-badge">Architecture View</span>
         </div>
     </nav>
 
     <main class="main-content">
 
-        <div class="page-header">
+        <div class="page-header fade-in-up">
             <h1>System Architecture</h1>
             <p>Interactive pipeline diagram of the failure-aware vision trust system. Click any node to view its
                 concept, logic, and mapping to the original ROS2 implementation.</p>
@@ -39,58 +52,65 @@
         <div style="display: flex; gap: 2rem; align-items: flex-start;">
 
             <!-- Pipeline -->
-            <div class="pipeline-container" style="flex-shrink: 0;">
-                <div class="pipeline-node" data-node="input" onclick="showDetail('input')">
+            <div class="pipeline-container fade-in-up" style="flex-shrink: 0; animation-delay: 0.1s;">
+                <div class="pipeline-node" data-node="input" role="button" tabindex="0" aria-pressed="false"
+                    onclick="showDetail('input')"
+                    onkeydown="if(event.key==='Enter'||event.key===' ')showDetail('input')">
                     <div class="pipeline-node-title">📷 User Input</div>
                     <div class="pipeline-node-sub">Sensor / Simulation Source</div>
                 </div>
-                <div class="pipeline-arrow"></div>
+                <div class="pipeline-arrow" aria-hidden="true"></div>
 
-                <div class="pipeline-node" data-node="vision" onclick="showDetail('vision')">
+                <div class="pipeline-node" data-node="vision" role="button" tabindex="0" aria-pressed="false"
+                    onclick="showDetail('vision')"
+                    onkeydown="if(event.key==='Enter'||event.key===' ')showDetail('vision')">
                     <div class="pipeline-node-title">🎥 Vision Simulation</div>
                     <div class="pipeline-node-sub">Frame Generation + Injection</div>
                 </div>
-                <div class="pipeline-arrow"></div>
+                <div class="pipeline-arrow" aria-hidden="true"></div>
 
-                <div class="pipeline-node" data-node="rule" onclick="showDetail('rule')">
+                <div class="pipeline-node" data-node="rule" role="button" tabindex="0" aria-pressed="false"
+                    onclick="showDetail('rule')" onkeydown="if(event.key==='Enter'||event.key===' ')showDetail('rule')">
                     <div class="pipeline-node-title">🔍 Rule-Based Detector</div>
                     <div class="pipeline-node-sub">image_subscriber.py</div>
                 </div>
-                <div class="pipeline-arrow"></div>
+                <div class="pipeline-arrow" aria-hidden="true"></div>
 
-                <div class="pipeline-node" data-node="ml" onclick="showDetail('ml')">
+                <div class="pipeline-node" data-node="ml" role="button" tabindex="0" aria-pressed="false"
+                    onclick="showDetail('ml')" onkeydown="if(event.key==='Enter'||event.key===' ')showDetail('ml')">
                     <div class="pipeline-node-title">🧠 ML Anomaly Model</div>
                     <div class="pipeline-node-sub">Autoencoder MSE</div>
                 </div>
-                <div class="pipeline-arrow"></div>
+                <div class="pipeline-arrow" aria-hidden="true"></div>
 
-                <div class="pipeline-node" data-node="trust" onclick="showDetail('trust')">
+                <div class="pipeline-node" data-node="trust" role="button" tabindex="0" aria-pressed="false"
+                    onclick="showDetail('trust')"
+                    onkeydown="if(event.key==='Enter'||event.key===' ')showDetail('trust')">
                     <div class="pipeline-node-title">⚖️ Temporal Trust Engine</div>
                     <div class="pipeline-node-sub">vision_supervisor.py</div>
                 </div>
-                <div class="pipeline-arrow"></div>
+                <div class="pipeline-arrow" aria-hidden="true"></div>
 
-                <div class="pipeline-node" data-node="policy" onclick="showDetail('policy')">
+                <div class="pipeline-node" data-node="policy" role="button" tabindex="0" aria-pressed="false"
+                    onclick="showDetail('policy')"
+                    onkeydown="if(event.key==='Enter'||event.key===' ')showDetail('policy')">
                     <div class="pipeline-node-title">🚦 Policy Gating</div>
                     <div class="pipeline-node-sub">vision_control_guard.py</div>
                 </div>
-                <div class="pipeline-arrow"></div>
+                <div class="pipeline-arrow" aria-hidden="true"></div>
 
-                <div class="pipeline-node" data-node="logger" onclick="showDetail('logger')">
+                <div class="pipeline-node" data-node="logger" role="button" tabindex="0" aria-pressed="false"
+                    onclick="showDetail('logger')"
+                    onkeydown="if(event.key==='Enter'||event.key===' ')showDetail('logger')">
                     <div class="pipeline-node-title">📝 Session Logger</div>
                     <div class="pipeline-node-sub">vision_reliability_log.csv</div>
                 </div>
             </div>
 
             <!-- Detail Panel -->
-            <div id="detailPanel" class="detail-panel glass-panel" style="flex: 1; min-width: 0;">
-                <div id="detailContent">
-                    <div style="text-align: center; padding: 3rem 1rem; color: var(--text-tertiary);">
-                        <div style="font-size: 2rem; margin-bottom: 0.75rem;">←</div>
-                        <p style="font-size: 0.85rem;">Click any pipeline node to view its details, logic, and ROS2
-                            mapping.</p>
-                    </div>
-                </div>
+            <div id="detailPanel" class="detail-panel glass-panel fade-in-up"
+                style="flex: 1; min-width: 0; animation-delay: 0.2s;" aria-live="polite" aria-label="Node detail panel">
+                <div id="detailContent"></div>
             </div>
 
         </div>
@@ -98,6 +118,39 @@
     </main>
 
     <script src="/js/architecture.js"></script>
+    <script src="/js/floating-lines.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Auto-select first node
+            showDetail('input');
+            const firstNode = document.querySelector('.pipeline-node[data-node="input"]');
+            if (firstNode) firstNode.focus();
+
+            // FloatingLines background
+            const bg = document.getElementById('floatingLinesBg');
+            if (bg && typeof FloatingLines !== 'undefined' && typeof THREE !== 'undefined') {
+                new FloatingLines(bg, {
+                    enabledWaves: ['top', 'bottom'],
+                    lineCount: 8,
+                    lineDistance: 11,
+                    bendRadius: 40,
+                    bendStrength: -0.3,
+                    interactive: false,
+                    parallax: false,
+                    animationSpeed: 0.6,
+                    linesGradient: ['#00f0ff', '#7b2fff', '#ff00aa', '#00f0ff'],
+                });
+            }
+
+            // Hamburger menu
+            const hamburger = document.getElementById('navHamburger');
+            const navLinks = document.getElementById('navLinks');
+            hamburger.addEventListener('click', () => {
+                const open = navLinks.classList.toggle('open');
+                hamburger.setAttribute('aria-expanded', open);
+            });
+        });
+    </script>
 
 </body>
 

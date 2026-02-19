@@ -271,7 +271,166 @@ function buildSequence(name) {
     }
 }
 
-// ── Video upload (client-side frame extraction) ──
+// ── Video upload (real Canvas-based frame extraction) ──
+
+/**
+ * Seek-based async frame step — resolves when the browser fires 'seeked'.
+ */
+async function seekToTime(video, t) {
+    return new Promise(resolve => {
+        video.onseeked = resolve;
+        video.currentTime = t;
+    });
+}
+
+/**
+ * Analyse one raw ImageData pixel array (128×128 RGBA).
+ * Returns { status, noise_level, brightness, pixelValues }
+ * where pixelValues is a Uint8Array of per-pixel mean intensities (R+G+B)/3,
+ * used as the "previous frame" reference for diff computation next iteration.
+ *
+ * @param {Uint8ClampedArray} data        – current frame RGBA pixels
+ * @param {Uint8Array|null}   prevPixels  – previous frame mean intensities, or null
+ */
+function analyzeFrame(data, prevPixels) {
+    const N = data.length / 4; // number of pixels
+    const pixels = new Uint8Array(N);
+
+    let sumIntensity = 0;
+    for (let i = 0; i < N; i++) {
+        const mean = (data[i * 4] + data[i * 4 + 1] + data[i * 4 + 2]) / 3;
+        pixels[i] = mean;
+        sumIntensity += mean;
+    }
+    const meanIntensity = sumIntensity / N;
+
+    // Noise: standard deviation of per-pixel intensities
+    let sumSq = 0;
+    for (let i = 0; i < N; i++) {
+        const d = pixels[i] - meanIntensity;
+        sumSq += d * d;
+    }
+    const noiseStd = Math.sqrt(sumSq / N);
+
+    // Frame diff vs previous frame
+    let frameDiff = Infinity; // treat first frame as non-frozen
+    if (prevPixels !== null) {
+        let sumDiff = 0;
+        for (let i = 0; i < N; i++) {
+            sumDiff += Math.abs(pixels[i] - prevPixels[i]);
+        }
+        frameDiff = sumDiff / N;
+    }
+
+    // Classification — mirrors image_subscriber.py rule priority
+    let status;
+    if (meanIntensity < 20) {
+        status = 'VISION_BLANK';
+    } else if (prevPixels !== null && frameDiff < 3.0) {
+        status = 'VISION_FROZEN';
+    } else if (noiseStd > 80) {
+        status = 'VISION_CORRUPTED';
+    } else {
+        status = 'VISION_OK';
+    }
+
+    return {
+        status,
+        noise_level: Math.min(1, noiseStd / 100),
+        brightness: Math.min(1, meanIntensity / 255),
+        pixelValues: pixels,
+    };
+}
+
+/**
+ * Run-length encode an array of frame analysis results into events for the
+ * playground WebSocket.  frame count is multiplied by 3 so the backend (which
+ * expects 30 fps frame counts) receives a sensible duration.
+ *
+ * @param {Array<{status, noise_level, brightness}>} frames
+ * @returns {Array<{status, noise, brightness, frames}>}
+ */
+function runLengthEncode(frames) {
+    if (frames.length === 0) return [];
+    const events = [];
+    let runStatus = frames[0].status;
+    let runNoise = frames[0].noise_level;
+    let runBrightness = frames[0].brightness;
+    let runCount = 1;
+
+    for (let i = 1; i < frames.length; i++) {
+        const f = frames[i];
+        if (f.status === runStatus) {
+            runNoise += f.noise_level;
+            runBrightness += f.brightness;
+            runCount++;
+        } else {
+            events.push({
+                status: runStatus,
+                noise: runNoise / runCount,
+                brightness: runBrightness / runCount,
+                frames: runCount * 3,
+            });
+            runStatus = f.status;
+            runNoise = f.noise_level;
+            runBrightness = f.brightness;
+            runCount = 1;
+        }
+    }
+    events.push({
+        status: runStatus,
+        noise: runNoise / runCount,
+        brightness: runBrightness / runCount,
+        frames: runCount * 3,
+    });
+    return events;
+}
+
+/**
+ * Render the videoAnalysisSummary UI: text counts + colour-coded timeline bar.
+ */
+function renderVideoSummary(frameResults) {
+    const el = document.getElementById('videoAnalysisSummary');
+    if (!el) return;
+
+    const counts = { VISION_OK: 0, VISION_FROZEN: 0, VISION_BLANK: 0, VISION_CORRUPTED: 0 };
+    frameResults.forEach(f => { counts[f.status] = (counts[f.status] || 0) + 1; });
+
+    // Summary text
+    const total = frameResults.length;
+    el.innerHTML = `
+        <div class="video-summary-text">
+            Detected:
+            <span style="color:var(--cyan)">${counts.VISION_OK} OK</span>,
+            <span style="color:var(--amber)">${counts.VISION_FROZEN} frozen</span>,
+            <span style="color:var(--red)">${counts.VISION_BLANK} blank</span>,
+            <span style="color:var(--magenta)">${counts.VISION_CORRUPTED} corrupted</span>
+            frames
+        </div>
+        <div class="video-timeline-bar" title="Frame timeline">
+            ${frameResults.map(f => {
+        const colorMap = {
+            VISION_OK: 'var(--cyan)',
+            VISION_FROZEN: 'var(--amber)',
+            VISION_BLANK: 'var(--red)',
+            VISION_CORRUPTED: 'var(--magenta)',
+        };
+        return `<span style="
+                    display:inline-block;
+                    width:${(1 / total * 100).toFixed(3)}%;
+                    height:12px;
+                    background:${colorMap[f.status] || '#888'};
+                    opacity:0.85;
+                " title="${f.status}"></span>`;
+    }).join('')}
+        </div>
+    `;
+    el.style.display = 'block';
+}
+
+/**
+ * Main upload handler — triggers async frame extraction pipeline.
+ */
 function handleVideoUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -280,21 +439,66 @@ function handleVideoUpload(event) {
     video.src = URL.createObjectURL(file);
     video.style.display = 'block';
 
-    video.onloadeddata = () => {
-        // Extract frames and build a sequence based on video properties
+    // Reset any previous summary
+    const summaryEl = document.getElementById('videoAnalysisSummary');
+    if (summaryEl) { summaryEl.style.display = 'none'; summaryEl.innerHTML = ''; }
+
+    video.onloadeddata = async () => {
         const duration = video.duration;
-        const fps = 30;
-        const totalFrames = Math.min(Math.floor(duration * fps), 300);
+        const SAMPLE_EVERY = 10;   // sample 1 in every 10 video frames
+        const FPS = 30;
+        const MAX_SAMPLES = 300;
+        const sampleInterval = SAMPLE_EVERY / FPS; // seconds between samples
 
-        // For now, simulate with a normal sequence matching video length
-        const events = [
-            { status: 'VISION_OK', noise: 0.1, brightness: 0.5, frames: totalFrames },
-        ];
+        const totalSamples = Math.min(
+            Math.floor(duration / sampleInterval),
+            MAX_SAMPLES
+        );
 
-        if (pgWs) {
+        // Hidden 128×128 canvas — never appended to DOM
+        const offscreen = document.createElement('canvas');
+        offscreen.width = 128;
+        offscreen.height = 128;
+        const ctx = offscreen.getContext('2d');
+
+        const uploadZone = document.getElementById('uploadZone');
+        const originalHTML = uploadZone ? uploadZone.innerHTML : '';
+
+        const frameResults = [];
+        let prevPixels = null;
+
+        for (let i = 0; i < totalSamples; i++) {
+            // Progress feedback
+            if (uploadZone) {
+                uploadZone.innerHTML = `
+                    <div class="upload-icon">⏳</div>
+                    <div class="upload-text">Analyzing frame ${i + 1} / ${totalSamples}…</div>
+                `;
+            }
+
+            const t = i * sampleInterval;
+            await seekToTime(video, t);
+
+            ctx.drawImage(video, 0, 0, 128, 128);
+            const imageData = ctx.getImageData(0, 0, 128, 128);
+
+            const result = analyzeFrame(imageData.data, prevPixels);
+            prevPixels = result.pixelValues;
+            frameResults.push(result);
+        }
+
+        // Restore upload zone
+        if (uploadZone) { uploadZone.innerHTML = originalHTML; }
+
+        // Render UI summary
+        renderVideoSummary(frameResults);
+
+        // Build and send events
+        const events = runLengthEncode(frameResults);
+        if (pgWs && events.length > 0) {
             pgWs.send({ action: 'reset' });
             setTimeout(() => {
-                pgWs.send({ action: 'simulate_sequence', events: events });
+                pgWs.send({ action: 'simulate_sequence', events });
             }, 200);
         }
     };

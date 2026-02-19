@@ -9,36 +9,51 @@
     <title>ML Playground — Vision Trust Platform</title>
     <link rel="stylesheet" href="/css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script src="/js/three.min.js"></script>
 </head>
 
 <body>
 
-    <nav class="nav">
-        <a href="/" class="nav-brand">
-            <div class="nav-brand-icon">FV</div>
+    <!-- Floating lines background (fixed, behind all content) -->
+    <div id="floatingLinesBg" class="page-floating-bg"></div>
+
+    <nav class="nav" role="navigation" aria-label="Main navigation">
+        <a href="/" class="nav-brand" aria-label="Vision Trust — Home">
+            <div class="nav-brand-icon" aria-hidden="true">FV</div>
             <span class="nav-brand-text">Vision Trust</span>
             <span class="nav-brand-sub">Research Platform</span>
         </a>
-        <ul class="nav-links">
-            <li><a href="/">⚡ Simulator</a></li>
-            <li><a href="/architecture">◈ Architecture</a></li>
-            <li><a href="/playground" class="active">⬡ Playground</a></li>
+
+        <button class="nav-hamburger" id="navHamburger" aria-label="Toggle menu" aria-expanded="false"
+            aria-controls="navLinks">
+            <span></span><span></span><span></span>
+        </button>
+
+        <ul class="nav-links" id="navLinks" role="list">
+            <li><a href="/" class="nav-link"><span class="nav-icon" aria-hidden="true">⚡</span> Simulator</a></li>
+            <li><a href="/architecture" class="nav-link"><span class="nav-icon" aria-hidden="true">◈</span>
+                    Architecture</a></li>
+            <li><a href="/playground" class="nav-link active" aria-current="page"><span class="nav-icon"
+                        aria-hidden="true">⬡</span> Playground</a></li>
         </ul>
-        <div class="nav-status">
-            <div class="status-dot disconnected" id="pgWsDot"></div>
-            <span id="pgWsText" style="color: var(--text-tertiary);">Disconnected</span>
+
+        <div class="nav-actions">
+            <div class="nav-ws-status">
+                <div class="status-dot disconnected" id="pgWsDot"></div>
+                <span id="pgWsText" class="nav-ws-label">Disconnected</span>
+            </div>
         </div>
     </nav>
 
     <main class="main-content">
 
-        <div class="page-header">
+        <div class="page-header fade-in-up">
             <h1>ML Playground</h1>
             <p>Upload a video to simulate anomaly scoring, compare raw vs reconstructed frames, and observe trust
                 evolution through the temporal trust engine. Uses heuristic proxy — no PyTorch required.</p>
         </div>
 
-        <div class="playground-grid">
+        <div class="playground-grid fade-in-up" style="animation-delay: 0.1s;">
 
             <!-- Left: Upload & Frame Comparison -->
             <div>
@@ -47,8 +62,11 @@
                     <div class="panel-header">
                         <div class="panel-title"><span class="icon">📤</span> Video Input</div>
                     </div>
-                    <div class="upload-zone" id="uploadZone" onclick="document.getElementById('videoInput').click()">
-                        <div class="upload-icon">🎬</div>
+                    <div class="upload-zone" id="uploadZone" role="button" tabindex="0"
+                        aria-label="Click or drop video file to upload"
+                        onclick="document.getElementById('videoInput').click()"
+                        onkeydown="if(event.key==='Enter')document.getElementById('videoInput').click()">
+                        <div class="upload-icon" aria-hidden="true">🎬</div>
                         <div class="upload-text">Click or drop a video file</div>
                         <div class="upload-sub">Supports MP4, WebM, AVI — max 50MB</div>
                     </div>
@@ -59,6 +77,15 @@
                     <video id="videoPlayer"
                         style="display:none; width:100%; border-radius:var(--radius-sm); margin-top:1rem;"
                         muted></video>
+
+                    <!-- Video analysis summary -->
+                    <div id="videoAnalysisSummary"
+                        style="display:none; margin-top:0.75rem; padding:0.75rem; background:rgba(0,0,0,0.25); border-radius:var(--radius-sm);">
+                    </div>
+                    <!-- Video timeline bar -->
+                    <div id="videoTimeline"
+                        style="display:none; margin-top:0.5rem; padding:0.5rem; background:rgba(0,0,0,0.2); border-radius:var(--radius-sm);">
+                    </div>
 
                     <!-- Sequence builder -->
                     <div style="margin-top: 1.25rem;">
@@ -161,6 +188,33 @@
 
     <script src="/js/ws.js"></script>
     <script src="/js/playground.js"></script>
+    <script src="/js/floating-lines.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const bg = document.getElementById('floatingLinesBg');
+            if (bg && typeof FloatingLines !== 'undefined' && typeof THREE !== 'undefined') {
+                new FloatingLines(bg, {
+                    enabledWaves: ['top', 'bottom'],
+                    lineCount: 8,
+                    lineDistance: 11,
+                    bendRadius: 40,
+                    bendStrength: -0.3,
+                    interactive: false,
+                    parallax: false,
+                    animationSpeed: 0.6,
+                    linesGradient: ['#00f0ff', '#7b2fff', '#ff00aa', '#00f0ff'],
+                });
+            }
+
+            // Hamburger menu
+            const hamburger = document.getElementById('navHamburger');
+            const navLinks = document.getElementById('navLinks');
+            hamburger.addEventListener('click', () => {
+                const open = navLinks.classList.toggle('open');
+                hamburger.setAttribute('aria-expanded', open);
+            });
+        });
+    </script>
 
 </body>
 

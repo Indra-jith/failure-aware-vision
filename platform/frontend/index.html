@@ -7,20 +7,32 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <style>#particleCanvas{display:none!important;position:absolute!important;width:0!important;height:0!important;visibility:hidden!important;}</style>
+  <style>
+    #particleCanvas {
+      display: none !important;
+      position: absolute !important;
+      width: 0 !important;
+      height: 0 !important;
+      visibility: hidden !important;
+    }
+  </style>
   <meta name="description"
     content="Failure-Aware Vision Trust Visualization — Interactive research simulator for temporal trust dynamics with bounded ML influence.">
   <title>Vision Trust Simulator — Failure-Aware Research Platform</title>
-  <link rel="stylesheet" href="/css/style.css?v=4">
+  <link rel="stylesheet" href="/css/style.css?v=5">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <script
+    src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/3.0.1/chartjs-plugin-annotation.min.js"></script>
+  <!-- Three.js for the FloatingLines hero background (local, CDN was not loading) -->
+  <script src="/js/three.min.js"></script>
 </head>
 
 <body>
 
   <!-- Hero Landing Section -->
   <section id="hero" class="hero-section">
-    <!-- Animated gradient background (pure CSS) -->
-    <div class="hero-gradient"></div>
+    <!-- FloatingLines WebGL background (sole background — no gradient overlay) -->
+    <div id="floatingLinesContainer" class="floating-lines-bg"></div>
 
     <!-- Hero Content -->
     <div class="hero-content">
@@ -48,20 +60,31 @@
   </section>
 
   <!-- Navigation -->
-  <nav class="nav">
-    <a href="/" class="nav-brand">
-      <div class="nav-brand-icon">FV</div>
+  <nav class="nav" role="navigation" aria-label="Main navigation">
+    <a href="/" class="nav-brand" aria-label="Vision Trust — Home">
+      <div class="nav-brand-icon" aria-hidden="true">FV</div>
       <span class="nav-brand-text">Vision Trust</span>
       <span class="nav-brand-sub">Research Platform</span>
     </a>
-    <ul class="nav-links">
-      <li><a href="/" class="active">⚡ Simulator</a></li>
-      <li><a href="/architecture">◈ Architecture</a></li>
-      <li><a href="/playground">⬡ Playground</a></li>
+
+    <button class="nav-hamburger" id="navHamburger" aria-label="Toggle menu" aria-expanded="false"
+      aria-controls="navLinks">
+      <span></span><span></span><span></span>
+    </button>
+
+    <ul class="nav-links" id="navLinks" role="list">
+      <li><a href="/" class="nav-link active" aria-current="page"><span class="nav-icon" aria-hidden="true">⚡</span>
+          Simulator</a></li>
+      <li><a href="/architecture" class="nav-link"><span class="nav-icon" aria-hidden="true">◈</span> Architecture</a>
+      </li>
+      <li><a href="/playground" class="nav-link"><span class="nav-icon" aria-hidden="true">⬡</span> Playground</a></li>
     </ul>
-    <div class="nav-status">
-      <div class="status-dot disconnected" id="wsStatusDot"></div>
-      <span id="wsStatusText" style="color: var(--text-tertiary);">Disconnected</span>
+
+    <div class="nav-actions">
+      <div class="nav-ws-status">
+        <div class="status-dot disconnected" id="wsStatusDot"></div>
+        <span id="wsStatusText" class="nav-ws-label">Disconnected</span>
+      </div>
     </div>
   </nav>
 
@@ -74,13 +97,27 @@
         vision reliability pipeline in real-time.</p>
     </div>
 
+    <p class="research-question">
+      Can a robot know when to stop trusting its own camera?
+    </p>
+
     <!-- Preset scenarios -->
     <div class="scenario-bar">
-      <button class="scenario-btn" onclick="runScenario('normal')">🟢 Normal Operation</button>
-      <button class="scenario-btn" onclick="runScenario('freeze')">🟡 Freeze Attack</button>
-      <button class="scenario-btn" onclick="runScenario('degrade')">🔴 Progressive Degradation</button>
-      <button class="scenario-btn" onclick="runScenario('recovery')">🔵 Recovery Sequence</button>
-      <button class="scenario-btn" onclick="runScenario('ml_stress')">🟣 ML Stress Test</button>
+      <button class="scenario-btn" onclick="runScenario('normal')">🟢 Normal Operation
+        <span class="scenario-hint">Watch baseline anomaly keep trust just below 1.0</span>
+      </button>
+      <button class="scenario-btn" onclick="runScenario('freeze')">🟡 Freeze Attack
+        <span class="scenario-hint">Observe trust velocity go negative → DECLINING → DEGRADED</span>
+      </button>
+      <button class="scenario-btn" onclick="runScenario('degrade')">🔴 Progressive Degradation
+        <span class="scenario-hint">Gradual noise increase — watch ML anomaly drag trust slowly</span>
+      </button>
+      <button class="scenario-btn" onclick="runScenario('recovery')">🔵 Recovery Sequence
+        <span class="scenario-hint">After corruption, recovery_debt slows the climb back</span>
+      </button>
+      <button class="scenario-btn" onclick="runScenario('ml_stress')">🟣 ML Stress Test
+        <span class="scenario-hint">High noise with VISION_OK — ML penalty fights recovery</span>
+      </button>
     </div>
 
     <div class="simulator-grid">
@@ -91,10 +128,29 @@
           <div class="panel-title"><span class="icon">🎥</span> Vision Simulation</div>
         </div>
 
-        <!-- Vision canvas -->
-        <div class="vision-canvas-wrap">
-          <canvas id="visionCanvas" width="320" height="240"></canvas>
-          <div class="vision-status-badge ok" id="visionBadge">VISION_OK</div>
+        <!-- Robot World + Camera Feed two-panel layout -->
+        <div class="sim-panels">
+          <!-- LEFT: Robot World -->
+          <div class="sim-panel">
+            <div class="panel-label">Robot World</div>
+            <canvas id="robotCanvas" width="380" height="200"></canvas>
+            <div id="robotStatusHUD" class="robot-hud">● MOVING</div>
+            <!-- Robot World overlay controls -->
+            <div class="rw-controls">
+              <button class="rw-btn" id="rwPlayPauseBtn" title="Play / Pause simulation"
+                onclick="rwState.paused=!rwState.paused; this.textContent=rwState.paused?'▶ Play':'⏸ Pause'">⏸
+                Pause</button>
+              <button class="rw-btn" id="rwGridBtn" title="Toggle perspective grid"
+                onclick="rwState.gridOn=!rwState.gridOn; this.classList.toggle('active')">⊞ Grid</button>
+            </div>
+          </div>
+
+          <!-- RIGHT: Camera Feed -->
+          <div class="sim-panel">
+            <div class="panel-label">Camera Feed</div>
+            <canvas id="visionCanvas" width="380" height="200"></canvas>
+            <div id="visionBadge" class="vision-status-badge ok">VISION_OK</div>
+          </div>
         </div>
 
         <!-- Mode buttons -->
@@ -183,7 +239,44 @@
               <div class="metric-label">Tick Count</div>
               <div class="metric-value" id="metricTick">0</div>
             </div>
+
+            <!-- Trust Velocity -->
+            <div class="metric-card">
+              <div class="metric-label">VELOCITY</div>
+              <div id="metricVelocity" class="metric-value">+0.000</div>
+              <div class="metric-unit">/s</div>
+            </div>
+
+            <!-- Recovery Debt -->
+            <div class="metric-card">
+              <div class="metric-label">REC. DEBT</div>
+              <div id="metricDebt" class="metric-value">0.000</div>
+              <div class="metric-unit">acc</div>
+            </div>
+
+            <!-- ML Conflicts -->
+            <div class="metric-card">
+              <div class="metric-label">CONFLICTS</div>
+              <div id="metricConflictCount" class="metric-value">0</div>
+              <div id="metricConflictIndicator" class="conflict-chip consensus">✓</div>
+            </div>
+
+            <!-- Robot Speed -->
+            <div class="metric-card">
+              <div class="metric-label">ROBOT SPD</div>
+              <div id="metricRobotSpeed" class="metric-value">100%</div>
+            </div>
           </div>
+        </div>
+      </div>
+
+      <!-- Failure Attribution Summary (live, populated every tick) -->
+      <div class="chart-panel glass-panel" style="padding: 0.85rem 1.25rem;">
+        <div class="panel-header" style="margin-bottom: 0.5rem;">
+          <div class="panel-title"><span class="icon">⚠</span> Failure Attribution</div>
+        </div>
+        <div id="failureSummaryPanel" class="failure-summary-panel none">
+          No trust excursions recorded.
         </div>
       </div>
 
@@ -208,7 +301,38 @@
   <script src="/js/gauge.js"></script>
   <script src="/js/charts.js"></script>
   <script src="/js/ws.js"></script>
+  <script src="/js/floating-lines.js"></script>
   <script src="/js/app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      const heroContainer = document.getElementById('floatingLinesContainer');
+      if (heroContainer && typeof FloatingLines !== 'undefined' && typeof THREE !== 'undefined') {
+        new FloatingLines(heroContainer, {
+          enabledWaves: ['top', 'bottom'],
+          lineCount: 8,
+          lineDistance: 11,
+          bendRadius: 40,
+          bendStrength: -0.3,
+          interactive: true,
+          parallax: true,
+          animationSpeed: 1.7,
+          mouseDamping: 0.06,
+          parallaxStrength: 0.15,
+          linesGradient: ['#00f0ff', '#7b2fff', '#ff00aa', '#00f0ff'],
+        });
+      }
+
+      // Hamburger menu toggle
+      const hamburger = document.getElementById('navHamburger');
+      const navLinks = document.getElementById('navLinks');
+      if (hamburger && navLinks) {
+        hamburger.addEventListener('click', () => {
+          const open = navLinks.classList.toggle('open');
+          hamburger.setAttribute('aria-expanded', open);
+        });
+      }
+    });
+  </script>
 
 </body>
 

@@ -9,6 +9,7 @@
     <title>Architecture — Vision Trust Platform</title>
     <link rel="stylesheet" href="/css/style.css">
     <script src="/js/three.min.js"></script>
+    <script src="https://unpkg.com/lenis@1.1.20/dist/lenis.min.js"></script>
 </head>
 
 <body>
@@ -45,88 +46,271 @@
 
         <div class="page-header fade-in-up">
             <h1>System Architecture</h1>
-            <p>Interactive pipeline diagram of the failure-aware vision trust system. Click any node to view its
-                concept, logic, and mapping to the original ROS2 implementation.</p>
+            <p>Interactive pipeline stack of the failure-aware vision trust system. Scroll down to explore the data flow
+                from sensor input to policy gating.</p>
         </div>
 
-        <div style="display: flex; gap: 2rem; align-items: flex-start;">
+        <div class="scroll-stack-scroller fade-in-up">
+            <div class="scroll-stack-inner">
 
-            <!-- Pipeline -->
-            <div class="pipeline-container fade-in-up" style="flex-shrink: 0; animation-delay: 0.1s;">
-                <div class="pipeline-node" data-node="input" role="button" tabindex="0" aria-pressed="false"
-                    onclick="showDetail('input')"
-                    onkeydown="if(event.key==='Enter'||event.key===' ')showDetail('input')">
-                    <div class="pipeline-node-title">📷 User Input</div>
-                    <div class="pipeline-node-sub">Sensor / Simulation Source</div>
-                </div>
-                <div class="pipeline-arrow" aria-hidden="true"></div>
+                <!-- 1. Input -->
+                <div class="scroll-stack-card">
+                    <div class="glass-panel">
+                        <h2>📷 User Input — Sensor Source</h2>
 
-                <div class="pipeline-node" data-node="vision" role="button" tabindex="0" aria-pressed="false"
-                    onclick="showDetail('vision')"
-                    onkeydown="if(event.key==='Enter'||event.key===' ')showDetail('vision')">
-                    <div class="pipeline-node-title">🎥 Vision Simulation</div>
-                    <div class="pipeline-node-sub">Frame Generation + Injection</div>
-                </div>
-                <div class="pipeline-arrow" aria-hidden="true"></div>
+                        <div class="detail-section">
+                            <h3>Concept</h3>
+                            <p>Visual data arrives via the <code>/image_raw</code> Gazebo topic at 30Hz. The web
+                                simulation lets you inject hardware-level faults directly (freeze, blank, corruption)
+                                prior to processing.</p>
+                        </div>
 
-                <div class="pipeline-node" data-node="rule" role="button" tabindex="0" aria-pressed="false"
-                    onclick="showDetail('rule')" onkeydown="if(event.key==='Enter'||event.key===' ')showDetail('rule')">
-                    <div class="pipeline-node-title">🔍 Rule-Based Detector</div>
-                    <div class="pipeline-node-sub">image_subscriber.py</div>
-                </div>
-                <div class="pipeline-arrow" aria-hidden="true"></div>
+                        <div class="detail-section">
+                            <h3>Logic</h3>
+                            <pre># ROS2: Camera publishes to /image_raw
+# Web: User selects mode via control panel
 
-                <div class="pipeline-node" data-node="ml" role="button" tabindex="0" aria-pressed="false"
-                    onclick="showDetail('ml')" onkeydown="if(event.key==='Enter'||event.key===' ')showDetail('ml')">
-                    <div class="pipeline-node-title">🧠 ML Anomaly Model</div>
-                    <div class="pipeline-node-sub">Autoencoder MSE</div>
-                </div>
-                <div class="pipeline-arrow" aria-hidden="true"></div>
+Input modes:
+  normal     →  Continuous frame stream
+  frozen     →  Repeated identical frame
+  blank      →  Near-zero intensity frame
+  corrupted  →  Mismatched frame dimensions</pre>
+                        </div>
 
-                <div class="pipeline-node" data-node="trust" role="button" tabindex="0" aria-pressed="false"
-                    onclick="showDetail('trust')"
-                    onkeydown="if(event.key==='Enter'||event.key===' ')showDetail('trust')">
-                    <div class="pipeline-node-title">⚖️ Temporal Trust Engine</div>
-                    <div class="pipeline-node-sub">vision_supervisor.py</div>
-                </div>
-                <div class="pipeline-arrow" aria-hidden="true"></div>
+                        <div class="detail-section">
+                            <h3>ROS2 Source Mapping</h3>
+                            <p><span class="file-ref">📁 gazebo_camera_demo/launch/camera_world.launch.py</span></p>
+                        </div>
 
-                <div class="pipeline-node" data-node="policy" role="button" tabindex="0" aria-pressed="false"
-                    onclick="showDetail('policy')"
-                    onkeydown="if(event.key==='Enter'||event.key===' ')showDetail('policy')">
-                    <div class="pipeline-node-title">🚦 Policy Gating</div>
-                    <div class="pipeline-node-sub">vision_control_guard.py</div>
-                </div>
-                <div class="pipeline-arrow" aria-hidden="true"></div>
 
-                <div class="pipeline-node" data-node="logger" role="button" tabindex="0" aria-pressed="false"
-                    onclick="showDetail('logger')"
-                    onkeydown="if(event.key==='Enter'||event.key===' ')showDetail('logger')">
-                    <div class="pipeline-node-title">📝 Session Logger</div>
-                    <div class="pipeline-node-sub">vision_reliability_log.csv</div>
+                    </div>
                 </div>
+
+                <!-- 2. Vision -->
+                <div class="scroll-stack-card">
+                    <div class="glass-panel">
+                        <h2>👁️ Vision Simulation — Frame Generation</h2>
+
+                        <div class="detail-section">
+                            <h3>Concept</h3>
+                            <p>Generates synthetic frames mimicking real sensors via Canvas configurations: Gaussian
+                                noise, brightness shifts, sensor lockup, and packet drops.</p>
+                        </div>
+
+                        <div class="detail-section">
+                            <h3>Logic</h3>
+                            <pre># Frame state classification rules:
+if frame == previous_frame:       # diff < 1.0
+    status = VISION_FROZEN
+elif mean(frame) < 5:
+    status = VISION_BLANK
+elif frame.shape != expected:
+    status = VISION_CORRUPTED
+else:
+    status = VISION_OK</pre>
+                        </div>
+
+
+                    </div>
+                </div>
+
+                <!-- 3. Rule -->
+                <div class="scroll-stack-card">
+                    <div class="glass-panel">
+                        <h2>🛡️ Rule-Based Detector — Failure Classification</h2>
+
+                        <div class="detail-section">
+                            <h3>Concept</h3>
+                            <p>The first line of defense. Classifies frames into four states (<strong>OK, FROZEN, BLANK,
+                                    CORRUPTED</strong>) via pixel diffs and shape checks. Rules are absolute.</p>
+                        </div>
+
+                        <div class="detail-section">
+                            <h3>Logic</h3>
+                            <pre>def on_image(self, msg):
+    status = 'VISION_OK'
+    if frame.shape != prev.shape:
+        status = 'VISION_CORRUPTED'
+    elif abs(frame - prev) < 1.0:
+        status = 'VISION_FROZEN'
+    elif mean(frame) < 5:
+        status = 'VISION_BLANK'</pre>
+                        </div>
+
+                        <div class="detail-section">
+                            <h3>ROS2 Source Mapping</h3>
+                            <p><span class="file-ref">📁 failure_aware_ros/image_subscriber.py (lines 73-89)</span></p>
+                        </div>
+
+
+                    </div>
+                </div>
+
+                <!-- 4. ML -->
+                <div class="scroll-stack-card">
+                    <div class="glass-panel">
+                        <h2>🧠 ML Anomaly Model — Autoencoder</h2>
+
+                        <div class="detail-section">
+                            <h3>Concept</h3>
+                            <p>A Conv-Autoencoder trained on gazebo scenes. Frame reconstruction MSE derives the
+                                continuous anomaly score. This is strictly a penalizing signal.</p>
+                        </div>
+
+                        <div class="detail-section">
+                            <h3>Logic</h3>
+                            <pre>class AutoEncoder(nn.Module):
+    # Conv2d → ReLU → ConvTranspose2d
+
+# Inference:
+tensor = torch.tensor(img).unsqueeze(0)
+recon = model(tensor)
+anomaly_score = MSE(recon, tensor)</pre>
+                        </div>
+
+                        <div class="detail-section">
+                            <h3>ROS2 Source Mapping</h3>
+                            <p><span class="file-ref">📁 ml_phase1/train_autoencoder.py, ml_phase1/run_inference.py,
+                                    failure_aware_ros/image_subscriber.py (lines 99-108)</span></p>
+                        </div>
+
+
+                    </div>
+                </div>
+
+                <!-- 5. Trust -->
+                <div class="scroll-stack-card">
+                    <div class="glass-panel">
+                        <h2>⏱️ Temporal Trust Engine — Core Mathematics</h2>
+
+                        <div class="detail-section">
+                            <h3>Concept</h3>
+                            <p>Maintains temporal <strong>reliability</strong> ∈ [0, 1]. Base decay targets physical
+                                sensor faults. Leaky ML penalty applies only during VISION_OK.</p>
+                        </div>
+
+                        <div class="detail-section">
+                            <h3>Logic</h3>
+                            <pre>def update(status, anomaly, dt):
+    if status == 'VISION_OK':
+        reliability += 0.10 * dt
+        anomaly_int += anomaly * dt - leak
+        reliability -= ml_penalty(anomaly_int)
+    else:
+        # Strict decay rules
+        reliability -= decay_rate[status] * dt
+        anomaly_int = 0.0 # ML disabled
+
+    reliability = clamp(reliability, 0, 1)</pre>
+                        </div>
+
+
+                    </div>
+                </div>
+
+                <!-- 6. Policy -->
+                <div class="scroll-stack-card">
+                    <div class="glass-panel">
+                        <h2>⚡ Policy Gating — Action Derivation</h2>
+
+                        <div class="detail-section">
+                            <h3>Concept</h3>
+                            <p>Policy converts the [0,1] confidence into absolute boolean directives mapping to hardware
+                                control bounds (ALLOWED, DEGRADED, BLOCKED) via thresholds.</p>
+                        </div>
+
+                        <div class="detail-section">
+                            <h3>Logic</h3>
+                            <pre>def derive_policy(rel):
+    if rel >= 0.7: return 'ALLOWED'
+    if rel >= 0.3: return 'DEGRADED'
+    return 'BLOCKED'
+# Fixed bounds. Zero hysteresis overrides.</pre>
+                        </div>
+
+                        <div class="detail-section">
+                            <h3>ROS2 Source Mapping</h3>
+                            <p><span class="file-ref">📁 failure_aware_ros/vision_supervisor.py (lines 101-113),
+                                    failure_aware_ros/vision_control_guard.py</span></p>
+                        </div>
+
+
+                    </div>
+                </div>
+
+                <!-- 7. Logger -->
+                <div class="scroll-stack-card">
+                    <div class="glass-panel">
+                        <h2>📊 Session Logger — Data Recording</h2>
+
+                        <div class="detail-section">
+                            <h3>Concept</h3>
+                            <p>All core state updates (time, status, trust, bounded ML score) export to structured CSV
+                                enabling post-run analysis and ROS2 architectural validation.</p>
+                        </div>
+
+                        <div class="detail-section">
+                            <h3>Logic</h3>
+                            <pre># Format tracking ROS2 output
+[time, rel, state, anomaly, integral]
+
+# Example write
+177074383, 1.0, ALLOWED, 0.019, 0.003
+flush() # Immediate write guarantee</pre>
+                        </div>
+
+                        <div class="detail-section">
+                            <h3>ROS2 Source Mapping</h3>
+                            <p><span class="file-ref">📁 failure_aware_ros/vision_supervisor.py (lines 62-78, 119-128),
+                                    vision_logs/vision_reliability_log.csv</span></p>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- 8. ML Philosophy -->
+                <div class="scroll-stack-card">
+                    <div class="glass-panel">
+                        <h2>🤖 How ML is Used</h2>
+
+                        <div class="detail-section">
+                            <h3>Context</h3>
+                            <p>Throughout the pipeline, the machine learning components (CNN Autoencoder) are strictly
+                                isolated from safety-critical decision paths. This ensures the system maintains absolute
+                                deterministic control.</p>
+                        </div>
+
+                        <div class="detail-section">
+                            <h3>Key Principles</h3>
+                            <p>
+                                • <strong>Never Overrides Rules</strong>: ML anomaly scores can mathematically only
+                                decrease reliability, never increase it. Hard deterministic safety rules always
+                                dominate.<br>
+                                • <strong>Penalty Signal Only</strong>: The autoencoder output is strictly a bounded
+                                penalty term applied to the trust integrator.<br>
+                                • <strong>Instant Reset</strong>: On any explicit physical failure (camera freeze,
+                                signal drop), the ML temporal integration is instantly zeroed.<br>
+                                • <strong>Explainability</strong>: By mathematically separating the ML anomaly score
+                                into an independent continuous variable in the logs, the platform provides full
+                                auditability of the AI model's exact influence.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Spacer so the last pin can release cleanly -->
+                <div class="scroll-stack-end"></div>
+
             </div>
-
-            <!-- Detail Panel -->
-            <div id="detailPanel" class="detail-panel glass-panel fade-in-up"
-                style="flex: 1; min-width: 0; animation-delay: 0.2s;" aria-live="polite" aria-label="Node detail panel">
-                <div id="detailContent"></div>
-            </div>
-
         </div>
 
     </main>
 
-    <script src="/js/architecture.js"></script>
     <script src="/js/floating-lines.js"></script>
+    <script src="/js/scroll-stack.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            // Auto-select first node
-            showDetail('input');
-            const firstNode = document.querySelector('.pipeline-node[data-node="input"]');
-            if (firstNode) firstNode.focus();
-
-            // FloatingLines background
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialize the floating lines background
             const bg = document.getElementById('floatingLinesBg');
             if (bg && typeof FloatingLines !== 'undefined' && typeof THREE !== 'undefined') {
                 new FloatingLines(bg, {
@@ -142,16 +326,30 @@
                 });
             }
 
-            // Hamburger menu
+            // Mobile nav toggle
             const hamburger = document.getElementById('navHamburger');
             const navLinks = document.getElementById('navLinks');
-            hamburger.addEventListener('click', () => {
-                const open = navLinks.classList.toggle('open');
-                hamburger.setAttribute('aria-expanded', open);
+
+            if (hamburger) {
+                hamburger.addEventListener('click', () => {
+                    const expanded = hamburger.getAttribute('aria-expanded') === 'true';
+                    hamburger.setAttribute('aria-expanded', !expanded);
+                    navLinks.classList.toggle('active');
+                    hamburger.classList.toggle('active');
+                });
+            }
+
+            // Initialize the ScrollStack animation manually
+            new ScrollStack({
+                itemDistance: 100,        // Space between cards before stacking
+                itemStackDistance: 0,    // Cards stack EXACTLY on top of each other, replacing dimensions
+                itemScale: 0,            // NO scaling — keep all cards same size
+                baseScale: 1,            // Top card always at full size
+                stackPosition: '10%',    // Pin higher up so larger cards fit on screen
+                useWindowScroll: true
             });
         });
     </script>
-
 </body>
 
 </html>

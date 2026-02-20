@@ -272,131 +272,116 @@ function updateRobotState(policyState, brightness) {
     }
 }
 
-function drawRobotWorld(brightness) {
-    if (!robotCtx) return;
-    const rc = document.getElementById('robotCanvas');
-    if (!rc) return;
-    if (rwState.paused) return;
-
-    // ── FPS counter ──
-    rwState.fpsCounter++;
-    const now = performance.now();
-    if (now - rwState.fpsTime >= 1000) {
-        rwState.fpsDisplay = rwState.fpsCounter;
-        rwState.fpsCounter = 0;
-        rwState.fpsTime = now;
-    }
-
-    // Smooth velocity
-    robotDisplayVel += (robotVelocity - robotDisplayVel) * 0.08;
-
-    const w = rc.width;
-    const h = rc.height;
+// ── Shared Environment Renderer ──
+function drawEnvironment(ctx, w, h, brightness, isVision) {
     const groundY = h * 0.64;
 
     // ── Sky gradient (atmospheric depth) ──
     const skyBri = Math.floor(brightness * 38);
-    const skyGrad = robotCtx.createLinearGradient(0, 0, 0, groundY);
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, groundY);
     skyGrad.addColorStop(0, `rgb(${skyBri + 5},  ${skyBri + 14}, ${skyBri + 32})`);
     skyGrad.addColorStop(0.6, `rgb(${skyBri + 10}, ${skyBri + 22}, ${skyBri + 42})`);
     skyGrad.addColorStop(1, `rgb(${skyBri + 18}, ${skyBri + 30}, ${skyBri + 48})`);
-    robotCtx.fillStyle = skyGrad;
-    robotCtx.fillRect(0, 0, w, groundY);
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0, 0, w, groundY);
 
     // Horizon haze
-    const hazeGrad = robotCtx.createLinearGradient(0, groundY - 28, 0, groundY + 8);
+    const hazeGrad = ctx.createLinearGradient(0, groundY - 28, 0, groundY + 8);
     hazeGrad.addColorStop(0, 'rgba(180,220,255,0.00)');
     hazeGrad.addColorStop(1, `rgba(${skyBri + 20},${skyBri + 40},${skyBri + 60},${brightness * 0.18 + 0.04})`);
-    robotCtx.fillStyle = hazeGrad;
-    robotCtx.fillRect(0, groundY - 28, w, 36);
+    ctx.fillStyle = hazeGrad;
+    ctx.fillRect(0, groundY - 28, w, 36);
 
     // ── Ground gradient ──
     const gBri = Math.floor(brightness * 32);
-    const groundGrad = robotCtx.createLinearGradient(0, groundY, 0, h);
+    const groundGrad = ctx.createLinearGradient(0, groundY, 0, h);
     groundGrad.addColorStop(0, `rgb(${gBri + 16}, ${gBri + 26}, ${gBri + 14})`);
     groundGrad.addColorStop(0.5, `rgb(${gBri + 10}, ${gBri + 18}, ${gBri + 9})`);
     groundGrad.addColorStop(1, `rgb(${gBri + 6},  ${gBri + 12}, ${gBri + 5})`);
-    robotCtx.fillStyle = groundGrad;
-    robotCtx.fillRect(0, groundY, w, h - groundY);
+    ctx.fillStyle = groundGrad;
+    ctx.fillRect(0, groundY, w, h - groundY);
 
     // Ground texture lines (subtle)
-    robotCtx.strokeStyle = `rgba(255,255,255,${brightness * 0.06 + 0.015})`;
-    robotCtx.lineWidth = 1;
+    ctx.strokeStyle = `rgba(255,255,255,${brightness * 0.06 + 0.015})`;
+    ctx.lineWidth = 1;
     for (let i = 0; i < 4; i++) {
         const y = groundY + (h - groundY) * (i + 1) / 5;
-        robotCtx.beginPath(); robotCtx.moveTo(0, y); robotCtx.lineTo(w, y); robotCtx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
     }
 
     // Ground horizon line
-    robotCtx.strokeStyle = `rgba(255,255,255,${brightness * 0.12 + 0.03})`;
-    robotCtx.lineWidth = 1;
-    robotCtx.beginPath(); robotCtx.moveTo(0, groundY); robotCtx.lineTo(w, groundY); robotCtx.stroke();
+    ctx.strokeStyle = `rgba(255,255,255,${brightness * 0.12 + 0.03})`;
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, groundY); ctx.lineTo(w, groundY); ctx.stroke();
 
     // ── Perspective grid overlay ──
-    if (rwState.gridOn) {
-        robotCtx.save();
-        robotCtx.globalAlpha = 0.18;
-        robotCtx.strokeStyle = '#00f0ff';
-        robotCtx.lineWidth = 0.5;
+    if (rwState.gridOn && !isVision) {
+        ctx.save();
+        ctx.globalAlpha = 0.18;
+        ctx.strokeStyle = '#00f0ff';
+        ctx.lineWidth = 0.5;
         const vp = { x: w / 2, y: groundY };
         // vertical lines converging to vanishing point
         for (let i = -5; i <= 5; i++) {
-            robotCtx.beginPath();
-            robotCtx.moveTo(vp.x, vp.y);
-            robotCtx.lineTo(vp.x + i * 40, h);
-            robotCtx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(vp.x, vp.y);
+            ctx.lineTo(vp.x + i * 40, h);
+            ctx.stroke();
         }
         // horizontal lines
         for (let j = 1; j <= 5; j++) {
             const y = groundY + (h - groundY) * (j / 5);
-            robotCtx.beginPath(); robotCtx.moveTo(0, y); robotCtx.lineTo(w, y); robotCtx.stroke();
+            ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
         }
-        robotCtx.restore();
+        ctx.restore();
     }
 
     // ── Dust particles ──
     if (rwState.particlesEnabled) {
         rwState.particles.forEach(p => {
-            p.x += p.vx * (0.5 + robotDisplayVel * 0.5);
-            p.y += p.vy;
-            if (p.x > w + 4) p.x = -4;
-            if (p.y < 0) p.y = h;
-            if (p.y > h) p.y = 0;
-            robotCtx.save();
-            robotCtx.globalAlpha = p.alpha * brightness;
-            robotCtx.fillStyle = '#c8e8ff';
-            robotCtx.beginPath();
-            robotCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-            robotCtx.fill();
-            robotCtx.restore();
+            ctx.save();
+            ctx.globalAlpha = p.alpha * brightness;
+            ctx.fillStyle = '#c8e8ff';
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
         });
     }
 
     // ── Trees ──
-    treePositions = treePositions.map(x => {
-        let nx = x - robotDisplayVel;
-        if (nx < -35) nx = w + 65 + Math.random() * 100;
-        return nx;
-    });
     treePositions.forEach(x => {
         const treeH = 60 + Math.sin(x * 0.27) * 14;
         const alpha = Math.min(1, brightness * 1.5 + 0.1);
         // Trunk
-        robotCtx.fillStyle = `rgba(72,48,28,${alpha})`;
-        robotCtx.beginPath();
-        robotCtx.roundRect(x - 5, groundY - treeH * 0.42, 10, treeH * 0.42, 2);
-        robotCtx.fill();
+        ctx.fillStyle = `rgba(72,48,28,${alpha})`;
+        ctx.beginPath();
+        ctx.roundRect(x - 5, groundY - treeH * 0.42, 10, treeH * 0.42, 2);
+        ctx.fill();
         // Canopy layers (depth)
         const gCol = Math.floor(brightness * 85 + 38);
-        robotCtx.beginPath();
-        robotCtx.arc(x, groundY - treeH * 0.42 - 8, 26, 0, Math.PI * 2);
-        robotCtx.fillStyle = `rgba(20,${gCol},20,${alpha * 0.7})`;
-        robotCtx.fill();
-        robotCtx.beginPath();
-        robotCtx.arc(x - 4, groundY - treeH * 0.42 - 2, 22, 0, Math.PI * 2);
-        robotCtx.fillStyle = `rgba(28,${gCol + 10},28,${alpha})`;
-        robotCtx.fill();
+        ctx.beginPath();
+        ctx.arc(x, groundY - treeH * 0.42 - 8, 26, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(20,${gCol},20,${alpha * 0.7})`;
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x - 4, groundY - treeH * 0.42 - 2, 22, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(28,${gCol + 10},28,${alpha})`;
+        ctx.fill();
     });
+}
+
+function drawRobotWorld(brightness) {
+    if (!robotCtx) return;
+    const rc = document.getElementById('robotCanvas');
+    if (!rc) return;
+
+    // Physics is already updated by renderVisionFrame; just draw.
+    const w = rc.width;
+    const h = rc.height;
+    const groundY = h * 0.64;
+
+    drawEnvironment(robotCtx, w, h, brightness, false);
 
     // ── Robot (2× larger) ──
     const robotX = 100;
@@ -520,42 +505,66 @@ function drawRobotWorld(brightness) {
 // ── Vision canvas rendering ──
 function renderVisionFrame() {
     frameCounter++;
+
     const w = visionCanvas.width;
     const h = visionCanvas.height;
+
+    // Ensure physics update happens exactly once per frame
+    if (!rwState.paused) {
+        rwState.fpsCounter++;
+        const now = performance.now();
+        if (now - rwState.fpsTime >= 1000) {
+            rwState.fpsDisplay = rwState.fpsCounter;
+            rwState.fpsCounter = 0;
+            rwState.fpsTime = now;
+        }
+
+        robotDisplayVel += (robotVelocity - robotDisplayVel) * 0.08;
+
+        if (rwState.particlesEnabled) {
+            rwState.particles.forEach(p => {
+                p.x += p.vx * (0.5 + robotDisplayVel * 0.5);
+                p.y += p.vy;
+                if (p.x > w + 4) p.x = -4;
+                if (p.y < 0) p.y = h;
+                if (p.y > h) p.y = 0;
+            });
+        }
+
+        treePositions = treePositions.map(x => {
+            let nx = x - robotDisplayVel;
+            if (nx < -35) nx = w + 65 + Math.random() * 100;
+            return nx;
+        });
+    }
 
     // Update global brightness for robot world
     currentBrightness = parseFloat(document.getElementById('brightnessSlider').value) / 100;
 
     if (currentMode === 'normal') {
-        // Simulated camera feed — moving gradient with noise
         const noise = parseFloat(document.getElementById('noiseSlider').value) / 100;
-        const brightness = currentBrightness;
-        const imgData = visionCtx.createImageData(w, h);
-        const data = imgData.data;
-        const time = frameCounter * 0.02;
 
-        for (let y = 0; y < h; y++) {
-            for (let x = 0; x < w; x++) {
-                const idx = (y * w + x) * 4;
-                // Base pattern: moving gradient
-                const base = Math.sin(x * 0.03 + time) * 30 + Math.cos(y * 0.04 + time * 0.7) * 25 + 80;
-                const b = base * brightness * 2;
-                // Add noise
-                const n = noise > 0 ? (Math.random() - 0.5) * 255 * noise : 0;
-                const val = Math.max(0, Math.min(255, b + n));
-                data[idx] = val * 0.7;     // R
-                data[idx + 1] = val * 0.9; // G
-                data[idx + 2] = val;       // B
-                data[idx + 3] = 255;
+        // 1. Draw exactly what the robot sees into the vision context!
+        drawEnvironment(visionCtx, w, h, currentBrightness, true);
+
+        // 2. ONLY apply noise over top of it if noise > 0
+        if (noise > 0) {
+            const imgData = visionCtx.getImageData(0, 0, w, h);
+            const data = imgData.data;
+            for (let i = 0; i < data.length; i += 4) {
+                const n = (Math.random() - 0.5) * 255 * noise;
+                data[i] = Math.max(0, Math.min(255, data[i] + n));
+                data[i + 1] = Math.max(0, Math.min(255, data[i + 1] + n));
+                data[i + 2] = Math.max(0, Math.min(255, data[i + 2] + n));
             }
+            visionCtx.putImageData(imgData, 0, 0);
         }
-        visionCtx.putImageData(imgData, 0, 0);
 
         // Overlay text
-        visionCtx.fillStyle = 'rgba(0, 240, 255, 0.3)';
+        visionCtx.fillStyle = 'rgba(0, 240, 255, 0.4)';
         visionCtx.font = '10px "JetBrains Mono", monospace';
         visionCtx.fillText(`FRAME ${frameCounter}`, 8, 16);
-        visionCtx.fillText(`NOISE: ${noise.toFixed(2)}  BRI: ${brightness.toFixed(2)}`, 8, 28);
+        visionCtx.fillText(`NOISE: ${noise.toFixed(2)}  BRI: ${currentBrightness.toFixed(2)}`, 8, 28);
 
     } else if (currentMode === 'frozen') {
         // Don't update — freeze the last frame
@@ -580,24 +589,25 @@ function renderVisionFrame() {
         visionCtx.fillText('Mean intensity < 5', w / 2, h / 2 + 22);
         visionCtx.textAlign = 'start';
 
-    } else if (currentMode === 'corrupted') {
-        // Corrupted: glitch effect
-        const imgData = visionCtx.createImageData(w, h);
+        // Corrupted: glitch effect applied over the real environment
+        drawEnvironment(visionCtx, w, h, currentBrightness, true);
+
+        const imgData = visionCtx.getImageData(0, 0, w, h);
         const data = imgData.data;
         for (let i = 0; i < data.length; i += 4) {
-            const glitch = Math.random() > 0.5;
-            data[i] = glitch ? Math.random() * 255 : 0;
-            data[i + 1] = glitch ? 0 : Math.random() * 100;
-            data[i + 2] = Math.random() * 180;
-            data[i + 3] = 255;
+            if (Math.random() > 0.8) {
+                data[i] = Math.random() * 255;
+                data[i + 1] = 0;
+                data[i + 2] = Math.random() * 255;
+            }
         }
         visionCtx.putImageData(imgData, 0, 0);
 
         // Glitch bars
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 6; i++) {
             const y = Math.random() * h;
-            const barH = 2 + Math.random() * 8;
-            visionCtx.fillStyle = `rgba(255, 0, 170, ${0.3 + Math.random() * 0.4})`;
+            const barH = 2 + Math.random() * 12;
+            visionCtx.fillStyle = `rgba(255, 0, 170, ${0.4 + Math.random() * 0.5})`;
             visionCtx.fillRect(0, y, w, barH);
         }
 

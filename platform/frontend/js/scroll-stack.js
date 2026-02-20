@@ -57,9 +57,14 @@ class ScrollStack {
         return (scrollTop - start) / (end - start);
     }
 
-    // Returns the card's top offset relative to document top (like getBoundingClientRect + scrollY).
-    _cardTop(card) {
-        return card.getBoundingClientRect().top + window.scrollY;
+    // Returns the card's top offset ignoring CSS transform (unlike getBoundingClientRect).
+    _cardTop(el) {
+        let top = 0;
+        while (el) {
+            top += el.offsetTop;
+            el = el.offsetParent;
+        }
+        return top;
     }
 
     // ─── initialise ───────────────────────────────────────────────────────────
@@ -122,7 +127,7 @@ class ScrollStack {
         const scaleEndPosPx = this._pct(this.scaleEndPosition, containerH);
 
         const endEl = document.querySelector('.scroll-stack-end');
-        const endElTop = endEl ? endEl.getBoundingClientRect().top + scrollTop : 0;
+        const endElTop = endEl ? this._cardTop(endEl) : 0;
         const pinEnd = endElTop - containerH / 2;
 
         this._cards.forEach((card, i) => {

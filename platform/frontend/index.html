@@ -133,7 +133,7 @@
           <!-- LEFT: Robot World -->
           <div class="sim-panel">
             <div class="panel-label">Robot World</div>
-            <canvas id="robotCanvas" width="380" height="200"></canvas>
+            <canvas id="robotCanvas" width="480" height="260"></canvas>
             <div id="robotStatusHUD" class="robot-hud">● MOVING</div>
             <!-- Robot World overlay controls -->
             <div class="rw-controls">
@@ -145,10 +145,37 @@
             </div>
           </div>
 
+          <!-- CENTER: Crucial Live Trust Metrics -->
+          <div class="sim-panel center-metrics">
+            <div class="panel-header" style="justify-content:center; margin-bottom: 0;">
+              <div id="policyBadge" class="policy-badge allowed">● ALLOWED</div>
+            </div>
+
+            <div class="gauge-container">
+              <canvas id="reliabilityGauge" width="180" height="180"></canvas>
+              <div class="gauge-label">Reliability Index</div>
+            </div>
+
+            <div class="core-metrics">
+              <div class="metric-card">
+                <div class="metric-label">Reliability</div>
+                <div class="metric-value cyan" id="metricReliability">1.000</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Vision State</div>
+                <div class="metric-value green" id="metricVision">OK</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">VELOCITY</div>
+                <div id="metricVelocity" class="metric-value">+0.000</div>
+              </div>
+            </div>
+          </div>
+
           <!-- RIGHT: Camera Feed -->
           <div class="sim-panel">
             <div class="panel-label">Camera Feed</div>
-            <canvas id="visionCanvas" width="380" height="200"></canvas>
+            <canvas id="visionCanvas" width="480" height="260"></canvas>
             <div id="visionBadge" class="vision-status-badge ok">VISION_OK</div>
           </div>
         </div>
@@ -191,26 +218,15 @@
         </div>
       </div>
 
-      <!-- Top right: Dashboard -->
+      <!-- Lower Dash: Deep Metrics & Charts -->
       <div class="dashboard-panel glass-panel">
         <div class="panel-header">
-          <div class="panel-title"><span class="icon">📊</span> Live Trust Dashboard</div>
-          <div id="policyBadge" class="policy-badge allowed">● ALLOWED</div>
+          <div class="panel-title"><span class="icon">📊</span> Diagnostics & Telemetry</div>
         </div>
 
         <div class="dashboard-grid">
-          <!-- Gauge -->
-          <div class="gauge-container">
-            <canvas id="reliabilityGauge" width="180" height="180"></canvas>
-            <div class="gauge-label">Reliability Index</div>
-          </div>
-
           <!-- Metrics -->
           <div class="metrics-grid">
-            <div class="metric-card">
-              <div class="metric-label">Reliability</div>
-              <div class="metric-value cyan" id="metricReliability">1.000</div>
-            </div>
             <div class="metric-card">
               <div class="metric-label">Anomaly Score</div>
               <div class="metric-value" id="metricAnomaly">0.000</div>
@@ -227,10 +243,7 @@
               <div class="metric-label">Recovery Rate</div>
               <div class="metric-value" id="metricRecovery">0.10</div>
             </div>
-            <div class="metric-card">
-              <div class="metric-label">Vision State</div>
-              <div class="metric-value green" id="metricVision">OK</div>
-            </div>
+
             <div class="metric-card">
               <div class="metric-label">ML Influence</div>
               <div class="ml-indicator active" id="metricML">● ACTIVE</div>
@@ -240,12 +253,7 @@
               <div class="metric-value" id="metricTick">0</div>
             </div>
 
-            <!-- Trust Velocity -->
-            <div class="metric-card">
-              <div class="metric-label">VELOCITY</div>
-              <div id="metricVelocity" class="metric-value">+0.000</div>
-              <div class="metric-unit">/s</div>
-            </div>
+
 
             <!-- Recovery Debt -->
             <div class="metric-card">

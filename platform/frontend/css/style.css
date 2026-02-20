@@ -821,23 +821,23 @@ body::before {
 }
 
 /* ── Grid layouts ── */
+/* ── Configured layouts for top/bottom ── */
 .simulator-grid {
-  display: grid;
-  grid-template-columns: 320px 1fr;
-  grid-template-rows: auto auto;
+  display: flex;
+  flex-direction: column;
   gap: 1.25rem;
 }
 
 .control-panel {
-  grid-row: 1 / 3;
+  width: 100%;
 }
 
 .dashboard-panel {
-  grid-column: 2;
+  width: 100%;
 }
 
 .chart-panel {
-  grid-column: 2;
+  width: 100%;
 }
 
 /* ── Vision simulation ── */
@@ -1017,10 +1017,11 @@ input[type="range"]::-webkit-slider-thumb:hover {
 
 /* ── Dashboard metrics ── */
 .dashboard-grid {
-  display: grid;
-  grid-template-columns: 200px 1fr;
-  gap: 1.25rem;
-  align-items: start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  align-items: center;
+  justify-content: center;
 }
 
 .gauge-container {
@@ -1044,17 +1045,23 @@ input[type="range"]::-webkit-slider-thumb:hover {
 }
 
 .metrics-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 0.75rem;
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  gap: 0.5rem;
 }
 
 .metric-card {
+  flex: 1;
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
-  padding: 0.85rem 1rem;
+  padding: 0.6rem 0.8rem;
   transition: var(--transition);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .metric-card:hover {
@@ -1062,17 +1069,17 @@ input[type="range"]::-webkit-slider-thumb:hover {
 }
 
 .metric-label {
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   color: var(--text-tertiary);
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.2rem;
   font-weight: 600;
 }
 
 .metric-value {
   font-family: var(--font-mono);
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 600;
   color: var(--text-primary);
   line-height: 1;
@@ -1133,7 +1140,8 @@ input[type="range"]::-webkit-slider-thumb:hover {
 /* ── Charts ── */
 .chart-container {
   position: relative;
-  height: 260px;
+  height: 180px;
+  /* Reduced from 260px to fit on screen */
   width: 100%;
 }
 
@@ -1654,8 +1662,28 @@ input[type="range"]::-webkit-slider-thumb:hover {
 }
 
 .sim-panel {
-  flex: 1;
+  flex: 2;
   position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.sim-panel.center-metrics {
+  flex: 1;
+  /* Center column is narrower */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 1rem;
+  gap: 1.5rem;
+}
+
+.core-metrics {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
 .panel-label {
@@ -1929,4 +1957,84 @@ input[type="range"]::-webkit-slider-thumb:hover {
   background: rgba(0, 240, 255, 0.18);
   border-color: rgba(0, 240, 255, 0.5);
   color: var(--cyan);
+}
+
+/* ── Scroll Stack Cards (Architecture) ── */
+.scroll-stack-scroller {
+  position: relative;
+  width: 100%;
+  overscroll-behavior: contain;
+  scroll-behavior: auto;
+  /* lenis handles smooth scrolling */
+}
+
+.scroll-stack-inner {
+  padding-bottom: 50vh;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.scroll-stack-card {
+  transform-origin: top center;
+  will-change: transform, filter;
+  backface-visibility: hidden;
+  transform-style: preserve-3d;
+  width: 100%;
+  margin: 40px 0;
+  /* Hardware acceleration */
+  transform: translateZ(0);
+  position: relative;
+  z-index: 2;
+}
+
+/* We don't want the default hover transform on stack cards to fight with our JS stacking transforms */
+.scroll-stack-card .glass-panel {
+  padding: 2.5rem;
+  display: flex;
+  flex-direction: column;
+  height: 540px;
+  /* Force uniform height for all cards */
+  overflow: hidden;
+  /* Guarantee nothing bleeds out of the box */
+  background: var(--bg-primary);
+  /* Completely opaque to hide stacked cards beneath */
+  transition: box-shadow 150ms ease, border-color 150ms ease;
+  /* omitted transform */
+}
+
+.scroll-stack-card .glass-panel:hover {
+  box-shadow: 0 16px 40px rgba(0, 240, 255, 0.12);
+  border-color: rgba(0, 240, 255, 0.3);
+}
+
+.scroll-stack-card h2 {
+  font-size: 1.6rem;
+  /* Increased */
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 1.5rem;
+}
+
+.scroll-stack-card h3 {
+  font-size: 1.1rem;
+  /* Increased */
+  margin-bottom: 0.5rem;
+  color: var(--cyan);
+}
+
+.scroll-stack-card p {
+  font-size: 0.95rem;
+  /* Increased */
+  line-height: 1.6;
+}
+
+.scroll-stack-card pre {
+  font-size: 0.85rem;
+  /* Increased */
+  padding: 1rem;
+}
+
+.scroll-stack-end {
+  width: 100%;
+  height: 1px;
 }

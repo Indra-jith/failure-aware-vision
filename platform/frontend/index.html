@@ -101,23 +101,37 @@
       Can a robot know when to stop trusting its own camera?
     </p>
 
-    <!-- Preset scenarios -->
-    <div class="scenario-bar">
-      <button class="scenario-btn" onclick="runScenario('normal')">🟢 Normal Operation
-        <span class="scenario-hint">Watch baseline anomaly keep trust just below 1.0</span>
-      </button>
-      <button class="scenario-btn" onclick="runScenario('freeze')">🟡 Freeze Attack
-        <span class="scenario-hint">Observe trust velocity go negative → DECLINING → DEGRADED</span>
-      </button>
-      <button class="scenario-btn" onclick="runScenario('degrade')">🔴 Progressive Degradation
-        <span class="scenario-hint">Gradual noise increase — watch ML anomaly drag trust slowly</span>
-      </button>
-      <button class="scenario-btn" onclick="runScenario('recovery')">🔵 Recovery Sequence
-        <span class="scenario-hint">After corruption, recovery_debt slows the climb back</span>
-      </button>
-      <button class="scenario-btn" onclick="runScenario('ml_stress')">🟣 ML Stress Test
-        <span class="scenario-hint">High noise with VISION_OK — ML penalty fights recovery</span>
-      </button>
+    <!-- Source mode toggle -->
+    <div class="source-mode-bar">
+      <div class="source-mode-label">Input Source</div>
+      <div class="source-mode-buttons">
+        <button class="source-btn active" data-source="simulation" onclick="setSourceMode('simulation', this)">🎮
+          Simulation</button>
+        <button class="source-btn" data-source="webcam" onclick="setSourceMode('webcam', this)">📷 Webcam</button>
+        <button class="source-btn" data-source="video" onclick="setSourceMode('video', this)">📁 Video File</button>
+      </div>
+      <input type="file" id="videoFileInput" accept="video/*" style="display:none" onchange="handleVideoUpload(this)">
+    </div>
+
+    <!-- Preset scenarios (visible only in simulation mode) -->
+    <div id="simOnlyControls">
+      <div class="scenario-bar">
+        <button class="scenario-btn" onclick="runScenario('normal')">🟢 Normal Operation
+          <span class="scenario-hint">Watch baseline anomaly keep trust just below 1.0</span>
+        </button>
+        <button class="scenario-btn" onclick="runScenario('freeze')">🟡 Freeze Attack
+          <span class="scenario-hint">Observe trust velocity go negative → DECLINING → DEGRADED</span>
+        </button>
+        <button class="scenario-btn" onclick="runScenario('degrade')">🔴 Progressive Degradation
+          <span class="scenario-hint">Gradual noise increase — watch ML anomaly drag trust slowly</span>
+        </button>
+        <button class="scenario-btn" onclick="runScenario('recovery')">🔵 Recovery Sequence
+          <span class="scenario-hint">After corruption, recovery_debt slows the climb back</span>
+        </button>
+        <button class="scenario-btn" onclick="runScenario('ml_stress')">🟣 ML Stress Test
+          <span class="scenario-hint">High noise with VISION_OK — ML penalty fights recovery</span>
+        </button>
+      </div>
     </div>
 
     <div class="simulator-grid">
@@ -310,7 +324,7 @@
   <script src="/js/charts.js"></script>
   <script src="/js/ws.js"></script>
   <script src="/js/floating-lines.js"></script>
-  <script src="/js/app.js"></script>
+  <script src="/js/app.js?v=5"></script>
   <script>
     document.addEventListener('DOMContentLoaded', function () {
       const heroContainer = document.getElementById('floatingLinesContainer');

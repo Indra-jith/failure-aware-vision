@@ -1441,25 +1441,106 @@ input[type="range"]::-webkit-slider-thumb:hover {
   background: rgba(255, 255, 255, 0.2);
 }
 
-/* ── Responsive ── */
+/* ══════════════════════════════════════════════════════
+   RESPONSIVE BREAKPOINTS
+   ══════════════════════════════════════════════════════ */
+
+/* ── Tablet (≤ 1024px) ── */
 @media (max-width: 1024px) {
   .simulator-grid {
-    grid-template-columns: 1fr;
+    gap: 1rem;
   }
 
-  .control-panel {
-    grid-row: auto;
+  .sim-panels {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .sim-panel {
+    flex: none;
+    width: 100%;
+  }
+
+  .sim-panel.center-metrics {
+    flex: none;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    padding-top: 0;
+    gap: 1rem;
+  }
+
+  .sim-panel.center-metrics .gauge-container {
+    flex: 0 0 auto;
+  }
+
+  .sim-panel.center-metrics #reliabilityGauge {
+    width: 120px;
+    height: 120px;
+  }
+
+  .core-metrics {
+    flex-direction: row;
+    gap: 0.5rem;
+    flex: 1 1 0;
   }
 
   .dashboard-grid {
-    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .metrics-grid {
+    flex-wrap: wrap;
+  }
+
+  .metric-card {
+    min-width: 100px;
   }
 
   .playground-grid {
     grid-template-columns: 1fr;
   }
+
+  .chart-container {
+    height: 160px;
+  }
+
+  .source-mode-bar {
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .source-btn {
+    font-size: 0.65rem;
+    padding: 0.35rem 0.7rem;
+  }
+
+  .scenario-bar {
+    gap: 0.4rem;
+  }
+
+  .scenario-btn {
+    font-size: 0.65rem;
+    padding: 0.35rem 0.7rem;
+  }
+
+  .scroll-stack-card .glass-panel {
+    height: 480px;
+    padding: 2rem;
+  }
+
+  .scroll-stack-card h2 {
+    font-size: 1.35rem;
+    margin-bottom: 1rem;
+  }
+
+  .scroll-stack-card p {
+    font-size: 0.88rem;
+  }
 }
 
+/* ── Small tablet / large phone (≤ 768px) ── */
 @media (max-width: 768px) {
   .nav {
     padding: 0 1rem;
@@ -1470,12 +1551,389 @@ input[type="range"]::-webkit-slider-thumb:hover {
   }
 
   .main-content {
-    padding-left: 1rem;
-    padding-right: 1rem;
+    padding-top: 72px;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
   }
 
-  .metrics-grid {
+  .glass-panel {
+    padding: 1rem;
+    border-radius: 12px;
+  }
+
+  .panel-header {
+    margin-bottom: 0.75rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .panel-title {
+    font-size: 0.72rem;
+  }
+
+  /* Hero */
+  .hero {
+    min-height: 80vh;
+    padding: 0 1rem;
+  }
+
+  .hero-content {
+    padding: 0 0.5rem;
+  }
+
+  .hero-description {
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .hero-cta {
+    padding: 0.6rem 1.5rem;
+    font-size: 0.85rem;
+  }
+
+  /* Sim panels */
+  .sim-panels {
+    gap: 0.5rem;
+  }
+
+  .sim-panel.center-metrics {
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+  }
+
+  .sim-panel.center-metrics #reliabilityGauge {
+    width: 100px;
+    height: 100px;
+  }
+
+  .core-metrics {
+    gap: 0.4rem;
+  }
+
+  .core-metrics .metric-card {
+    padding: 0.4rem 0.6rem;
+  }
+
+  /* Controls */
+  .mode-buttons {
     grid-template-columns: 1fr 1fr;
+    gap: 0.4rem;
+  }
+
+  .mode-btn {
+    padding: 0.5rem 0.5rem;
+    font-size: 0.65rem;
+  }
+
+  .control-group {
+    margin-bottom: 0.75rem;
+  }
+
+  /* Metrics */
+  .metrics-grid {
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .metric-card {
+    min-width: 80px;
+    padding: 0.5rem 0.6rem;
+  }
+
+  .metric-label {
+    font-size: 0.55rem;
+  }
+
+  .metric-value {
+    font-size: 0.85rem;
+  }
+
+  /* Charts */
+  .chart-container {
+    height: 140px;
+  }
+
+  .chart-controls {
+    gap: 0.3rem;
+  }
+
+  .chart-btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.6rem;
+  }
+
+  .source-mode-bar {
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    padding: 0.4rem 0.6rem;
+  }
+
+  .source-mode-label {
+    font-size: 0.6rem;
+  }
+
+  .source-btn {
+    font-size: 0.6rem;
+    padding: 0.3rem 0.6rem;
+  }
+
+  /* Scenario */
+  .scenario-bar {
+    gap: 0.35rem;
+  }
+
+  .scenario-btn {
+    font-size: 0.6rem;
+    padding: 0.3rem 0.6rem;
+  }
+
+  .scenario-hint {
+    display: none;
+  }
+
+  /* Action bar */
+  .action-bar {
+    gap: 0.4rem;
+    margin-top: 0.75rem;
+  }
+
+  .action-btn {
+    padding: 0.5rem;
+    font-size: 0.65rem;
+  }
+
+  /* Architecture page */
+  .scroll-stack-card .glass-panel {
+    height: auto;
+    min-height: 380px;
+    padding: 1.5rem;
+  }
+
+  .scroll-stack-card h2 {
+    font-size: 1.2rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .scroll-stack-card h3 {
+    font-size: 0.95rem;
+  }
+
+  .scroll-stack-card p {
+    font-size: 0.82rem;
+    line-height: 1.5;
+  }
+
+  .scroll-stack-card pre {
+    font-size: 0.72rem;
+    padding: 0.75rem;
+  }
+
+  .scroll-stack-inner {
+    padding-bottom: 30vh;
+  }
+
+  /* Architecture pipeline */
+  .pipeline-node {
+    width: 280px;
+    padding: 0.85rem 1.2rem;
+  }
+
+  /* Page header */
+  .page-header h1 {
+    font-size: 1.2rem;
+  }
+
+  .page-header {
+    margin-bottom: 1.25rem;
+    padding-bottom: 1rem;
+  }
+
+  /* Playground */
+  .upload-zone {
+    padding: 2rem 1.5rem;
+  }
+
+  /* Policy badge */
+  .policy-badge {
+    font-size: 0.65rem;
+    padding: 0.25rem 0.6rem;
+  }
+}
+
+/* ── Mobile (≤ 480px) ── */
+@media (max-width: 480px) {
+  .main-content {
+    padding-top: 64px;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  .glass-panel {
+    padding: 0.75rem;
+    border-radius: 10px;
+  }
+
+  /* Hero */
+  .hero {
+    min-height: 70vh;
+  }
+
+  .hero-badge {
+    font-size: 0.6rem;
+    padding: 3px 10px;
+    margin-bottom: 1rem;
+  }
+
+  .hero-description {
+    font-size: 0.82rem;
+  }
+
+  /* Sim panels */
+  .sim-panel.center-metrics {
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .sim-panel.center-metrics #reliabilityGauge {
+    width: 90px;
+    height: 90px;
+  }
+
+  .gauge-label {
+    font-size: 0.6rem;
+  }
+
+  .core-metrics {
+    flex-direction: column;
+    width: 100%;
+    gap: 0.35rem;
+  }
+
+  .panel-label {
+    font-size: 0.6rem;
+    margin-bottom: 0.25rem;
+  }
+
+  /* Mode buttons: stack 4 in a 2x2 */
+  .mode-buttons {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.3rem;
+  }
+
+  .mode-btn {
+    padding: 0.4rem 0.4rem;
+    font-size: 0.6rem;
+  }
+
+  /* Sliders */
+  .slider-label,
+  .slider-value {
+    font-size: 0.65rem;
+  }
+
+  /* Metrics row */
+  .metrics-grid {
+    flex-direction: column;
+  }
+
+  .metric-card {
+    min-width: unset;
+    width: 100%;
+  }
+
+  /* Charts */
+  .chart-container {
+    height: 120px;
+  }
+
+  .source-mode-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.3rem;
+  }
+
+  .source-mode-buttons {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .source-btn {
+    width: 100%;
+    text-align: center;
+    padding: 0.4rem 0.5rem;
+  }
+
+  /* Scenario bar */
+  .scenario-bar {
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  .scenario-btn {
+    width: 100%;
+    text-align: left;
+    padding: 0.4rem 0.75rem;
+  }
+
+  /* Architecture */
+  .scroll-stack-card .glass-panel {
+    height: auto;
+    min-height: 300px;
+    padding: 1.25rem;
+  }
+
+  .scroll-stack-card h2 {
+    font-size: 1.05rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .scroll-stack-card h3 {
+    font-size: 0.85rem;
+  }
+
+  .scroll-stack-card p {
+    font-size: 0.78rem;
+  }
+
+  .scroll-stack-card pre {
+    font-size: 0.65rem;
+    padding: 0.6rem;
+  }
+
+  .pipeline-node {
+    width: 100%;
+    max-width: 240px;
+    padding: 0.75rem 1rem;
+    font-size: 0.8rem;
+  }
+
+  /* Page header */
+  .page-header h1 {
+    font-size: 1rem;
+  }
+
+  /* Playground */
+  .upload-zone {
+    padding: 1.5rem 1rem;
+  }
+
+  /* Robot world controls */
+  .rw-controls {
+    gap: 0.25rem;
+  }
+
+  .rw-btn {
+    font-size: 0.55rem;
+    padding: 3px 6px;
+  }
+
+  /* Vision status badge */
+  .vision-status-badge {
+    font-size: 0.6rem;
+    padding: 0.2rem 0.5rem;
+    top: 0.5rem;
+    right: 0.5rem;
   }
 }
 
@@ -1523,6 +1981,93 @@ input[type="range"]::-webkit-slider-thumb:hover {
   color: var(--text-secondary);
   margin-top: 0.4rem;
   max-width: 600px;
+}
+
+/* Source mode toggle bar */
+.source-mode-bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  padding: 0.65rem 1.2rem;
+  background: linear-gradient(135deg, rgba(10, 12, 28, 0.85), rgba(18, 20, 40, 0.75));
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.source-mode-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  opacity: 0.7;
+}
+
+.source-mode-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.source-btn {
+  padding: 0.5rem 1.1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+  position: relative;
+  overflow: hidden;
+}
+
+.source-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.06), rgba(123, 47, 255, 0.04));
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.source-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.source-btn:hover::before {
+  opacity: 1;
+}
+
+.source-btn:active {
+  transform: translateY(0) scale(0.97);
+}
+
+.source-btn.active {
+  border-color: rgba(0, 240, 255, 0.45);
+  color: var(--cyan);
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.12), rgba(0, 200, 255, 0.06));
+  box-shadow:
+    0 0 20px rgba(0, 240, 255, 0.12),
+    0 0 40px rgba(0, 240, 255, 0.05),
+    inset 0 1px 0 rgba(0, 240, 255, 0.15);
+  text-shadow: 0 0 12px rgba(0, 240, 255, 0.4);
+}
+
+.source-btn.active::before {
+  opacity: 0;
 }
 
 /* Scenario bar */

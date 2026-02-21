@@ -17,6 +17,13 @@ let visionCanvas, visionCtx;
 let frameCounter = 0;
 let currentBrightness = 0.5;
 
+// ── Source mode state (simulation | webcam | video) ──
+let currentSourceMode = 'simulation';
+let liveVideoImage = null;       // Image element for live video frames
+let liveVideoReady = false;      // true when a new frame is available to draw
+let lastSignalMetrics = null;    // {blur, brightness, freeze, entropy, raw} from backend
+let uploadedVideoPath = null;    // server-side path for uploaded video
+
 // ── Robot World state ──
 const robotCanvas = null; // set in DOMContentLoaded
 let robotCtx = null;
@@ -115,6 +122,35 @@ function onStateUpdate(state) {
             downloadCSV(state.failure_csv, `failure_attribution_${Date.now()}.csv`);
         }
         return;
+    }
+
+    // Handle mode change acknowledgment
+    if (state.type === 'mode_changed') {
+        currentSourceMode = state.source_mode;
+        return;
+    }
+
+    // Handle error messages
+    if (state.type === 'error') {
+        console.warn('Server error:', state.message);
+        return;
+    }
+
+    // ── Live video frame handling ──
+    if (state.video_frame) {
+        if (!liveVideoImage) {
+            liveVideoImage = new Image();
+            liveVideoImage.onload = () => { liveVideoReady = true; };
+        }
+        liveVideoImage.src = 'data:image/jpeg;base64,' + state.video_frame;
+    }
+    if (state.signal_metrics) {
+        lastSignalMetrics = state.signal_metrics;
+    }
+
+    // Update source mode from server state
+    if (state.source_mode) {
+        currentSourceMode = state.source_mode;
     }
 
     // Update gauge
@@ -731,6 +767,17 @@ function renderVisionFrame() {
     // Update global brightness for robot world
     currentBrightness = parseFloat(document.getElementById('brightnessSlider').value) / 100;
 
+    // ── Branch: Live mode vs Simulation mode ──
+    if (currentSourceMode !== 'simulation') {
+        // Live mode: render real video frame + signal overlay
+        drawLiveVideoFrame();
+
+        // Still draw robot world (it reacts to policy changes)
+        drawRobotWorld(currentBrightness);
+        requestAnimationFrame(renderVisionFrame);
+        return;
+    }
+
     if (currentMode === 'normal') {
         const noise = parseFloat(document.getElementById('noiseSlider').value) / 100;
 
@@ -815,6 +862,69 @@ function renderVisionFrame() {
     requestAnimationFrame(renderVisionFrame);
 }
 
+// ── Live video frame renderer (draws real video + signal overlay) ──
+let hasReceivedFirstFrame = false;
+
+function drawLiveVideoFrame() {
+    const w = visionCanvas.width;
+    const h = visionCanvas.height;
+
+    // ── No new frame? Leave the canvas COMPLETELY untouched ──
+    // The previous frame + overlays stay on screen as-is.
+    // This prevents overlay accumulation flicker.
+    if (!liveVideoReady || !liveVideoImage || !liveVideoImage.complete) {
+        if (!hasReceivedFirstFrame) {
+            // Show placeholder only before the very first frame
+            visionCtx.fillStyle = '#0a0a14';
+            visionCtx.fillRect(0, 0, w, h);
+            visionCtx.fillStyle = 'rgba(0,240,255,0.3)';
+            visionCtx.font = '12px "JetBrains Mono", monospace';
+            visionCtx.textAlign = 'center';
+            visionCtx.fillText('Connecting to video feed...', w / 2, h / 2);
+            visionCtx.textAlign = 'start';
+        }
+        return; // ← KEY: do nothing, leave canvas as-is
+    }
+
+    // ── New frame arrived — draw everything fresh ──
+    visionCtx.drawImage(liveVideoImage, 0, 0, w, h);
+    liveVideoReady = false;
+    hasReceivedFirstFrame = true;
+
+    // ── Signal metrics overlay (drawn exactly once per frame) ──
+    if (lastSignalMetrics) {
+        const m = lastSignalMetrics;
+        const y0 = h - 58;
+
+        // Semi-transparent background bar
+        visionCtx.fillStyle = 'rgba(0,0,0,0.55)';
+        visionCtx.fillRect(0, y0 - 4, w, 62);
+
+        visionCtx.font = '9px "JetBrains Mono", monospace';
+        visionCtx.fillStyle = 'rgba(0,240,255,0.7)';
+        visionCtx.fillText(`BLUR: ${m.blur.toFixed(3)}`, 8, y0 + 8);
+        visionCtx.fillText(`BRIGHT: ${m.brightness.toFixed(3)}`, 8, y0 + 20);
+        visionCtx.fillText(`FREEZE: ${m.freeze.toFixed(3)}`, 8, y0 + 32);
+        visionCtx.fillText(`ENTROPY: ${m.entropy.toFixed(3)}`, 8, y0 + 44);
+
+        if (m.raw) {
+            visionCtx.fillStyle = 'rgba(255,255,255,0.35)';
+            visionCtx.fillText(`lap=${m.raw.laplacian_var}`, 120, y0 + 8);
+            visionCtx.fillText(`\u03bc=${m.raw.mean_brightness}`, 120, y0 + 20);
+            visionCtx.fillText(`\u0394=${m.raw.frame_diff}`, 120, y0 + 32);
+            visionCtx.fillText(`H=${m.raw.entropy}`, 120, y0 + 44);
+        }
+    }
+
+    // Frame counter overlay (top-left)
+    visionCtx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+    visionCtx.fillRect(0, 0, 175, 34);
+    visionCtx.fillStyle = 'rgba(0, 240, 255, 0.6)';
+    visionCtx.font = '10px "JetBrains Mono", monospace';
+    visionCtx.fillText(`LIVE \u2022 FRAME ${frameCounter}`, 8, 14);
+    visionCtx.fillText(`MODE: ${currentSourceMode.toUpperCase()}`, 8, 26);
+}
+
 // ── Control handlers ──
 function setMode(mode, btn) {
     currentMode = mode;
@@ -859,6 +969,89 @@ function resetSimulation() {
 
     if (chart) chart.reset();
     if (wsClient) wsClient.send({ action: 'reset' });
+}
+
+// ── Source mode switching ──
+function setSourceMode(mode, btn) {
+    // Update button states
+    document.querySelectorAll('.source-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+
+    const simControls = document.getElementById('simOnlyControls');
+    const controlPanel = document.querySelector('.control-panel');
+
+    if (mode === 'video') {
+        // Trigger file picker
+        document.getElementById('videoFileInput').click();
+        return; // handleVideoUpload will complete the switch
+    }
+
+    if (mode === 'simulation') {
+        // Show simulation-only controls
+        if (simControls) simControls.style.display = '';
+        currentSourceMode = 'simulation';
+        liveVideoReady = false;
+        hasReceivedFirstFrame = false;
+        lastSignalMetrics = null;
+    } else {
+        // Hide simulation-only controls in live modes
+        if (simControls) simControls.style.display = 'none';
+        hasReceivedFirstFrame = false;
+    }
+
+    // Send to server
+    if (wsClient) {
+        wsClient.send({ action: 'set_source_mode', mode: mode });
+    }
+
+    // Reset chart on mode switch
+    if (chart) chart.reset();
+}
+
+async function handleVideoUpload(input) {
+    if (!input.files || !input.files[0]) return;
+
+    const file = input.files[0];
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+        const resp = await fetch('/api/upload-video', {
+            method: 'POST',
+            body: formData,
+        });
+
+        if (!resp.ok) {
+            console.error('Upload failed:', resp.statusText);
+            return;
+        }
+
+        const result = await resp.json();
+        uploadedVideoPath = result.path;
+
+        // Hide sim controls
+        const simControls = document.getElementById('simOnlyControls');
+        if (simControls) simControls.style.display = 'none';
+
+        // Tell server to start analyzing the uploaded video
+        if (wsClient) {
+            wsClient.send({
+                action: 'set_source_mode',
+                mode: 'video',
+                filepath: uploadedVideoPath,
+            });
+        }
+
+        if (chart) chart.reset();
+        currentSourceMode = 'video';
+        lastSignalMetrics = null;
+
+    } catch (err) {
+        console.error('Upload error:', err);
+    }
+
+    // Reset the input so the same file can be re-selected
+    input.value = '';
 }
 
 function downloadLog() {

@@ -22,9 +22,15 @@ const robotCanvas = null; // set in DOMContentLoaded
 let robotCtx = null;
 let robotVelocity = 2.5;
 let robotDisplayVel = 2.5;
-let treePositions = [100, 220, 340, 460];
+let treePositions = [
+    { x: 100, side: -1, seed: 0.3 },
+    { x: 220, side: 1, seed: 0.7 },
+    { x: 340, side: -1, seed: 0.5 },
+    { x: 460, side: 1, seed: 0.9 }
+];
 let robotWheelAngle = 0;
 let robotRocking = 0;
+let fpvGroundScroll = 0; // scrolling ground offset for first-person view
 
 const POLICY_VELOCITY = {
     'VISION_ALLOWED': 2.5,
@@ -350,8 +356,9 @@ function drawEnvironment(ctx, w, h, brightness, isVision) {
     }
 
     // ── Trees ──
-    treePositions.forEach(x => {
-        const treeH = 60 + Math.sin(x * 0.27) * 14;
+    treePositions.forEach(tree => {
+        const x = tree.x;
+        const treeH = 60 + Math.sin(tree.seed * 17) * 14;
         const alpha = Math.min(1, brightness * 1.5 + 0.1);
         // Trunk
         ctx.fillStyle = `rgba(72,48,28,${alpha})`;
@@ -369,6 +376,183 @@ function drawEnvironment(ctx, w, h, brightness, isVision) {
         ctx.fillStyle = `rgba(28,${gCol + 10},28,${alpha})`;
         ctx.fill();
     });
+}
+
+// ── First-Person POV Renderer (robot's onboard camera) ──
+function drawFirstPersonPOV(ctx, w, h, brightness) {
+    const horizonY = h * 0.42; // horizon near mid-frame (~42%)
+    const vpX = w / 2;         // vanishing point center
+    const speed = robotDisplayVel;
+
+    // ── Sky ──
+    const skyBri = Math.floor(brightness * 38);
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, horizonY);
+    skyGrad.addColorStop(0, `rgb(${skyBri + 4}, ${skyBri + 12}, ${skyBri + 30})`);
+    skyGrad.addColorStop(0.5, `rgb(${skyBri + 8}, ${skyBri + 20}, ${skyBri + 40})`);
+    skyGrad.addColorStop(1, `rgb(${skyBri + 16}, ${skyBri + 30}, ${skyBri + 52})`);
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0, 0, w, horizonY);
+
+    // Horizon atmospheric haze
+    const hazeGrad = ctx.createLinearGradient(0, horizonY - 20, 0, horizonY + 12);
+    hazeGrad.addColorStop(0, 'rgba(160,200,240,0.00)');
+    hazeGrad.addColorStop(1, `rgba(${skyBri + 25},${skyBri + 45},${skyBri + 65},${brightness * 0.22 + 0.05})`);
+    ctx.fillStyle = hazeGrad;
+    ctx.fillRect(0, horizonY - 20, w, 32);
+
+    // ── Ground (perspective road surface) ──
+    const gBri = Math.floor(brightness * 32);
+    const groundGrad = ctx.createLinearGradient(0, horizonY, 0, h);
+    groundGrad.addColorStop(0, `rgb(${gBri + 18}, ${gBri + 28}, ${gBri + 16})`);
+    groundGrad.addColorStop(0.4, `rgb(${gBri + 12}, ${gBri + 20}, ${gBri + 10})`);
+    groundGrad.addColorStop(1, `rgb(${gBri + 8}, ${gBri + 14}, ${gBri + 7})`);
+    ctx.fillStyle = groundGrad;
+    ctx.fillRect(0, horizonY, w, h - horizonY);
+
+    // ── Road / path (centered darker strip converging to vanishing point) ──
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(vpX - 3, horizonY);            // narrow at horizon
+    ctx.lineTo(vpX + 3, horizonY);
+    ctx.lineTo(w * 0.7, h);                    // wide at bottom
+    ctx.lineTo(w * 0.3, h);
+    ctx.closePath();
+    const roadGrad = ctx.createLinearGradient(0, horizonY, 0, h);
+    roadGrad.addColorStop(0, `rgba(${gBri + 6},${gBri + 10},${gBri + 5},0.6)`);
+    roadGrad.addColorStop(1, `rgba(${gBri + 4},${gBri + 8},${gBri + 3},0.9)`);
+    ctx.fillStyle = roadGrad;
+    ctx.fill();
+    ctx.restore();
+
+    // ── Road center dashes (scrolling forward motion) ──
+    fpvGroundScroll = (fpvGroundScroll + speed * 3) % 40;
+    ctx.save();
+    ctx.strokeStyle = `rgba(255,255,255,${brightness * 0.18 + 0.04})`;
+    ctx.lineWidth = 1.5;
+    const dashCount = 12;
+    for (let i = 0; i < dashCount; i++) {
+        const t = (i / dashCount + fpvGroundScroll / 40 / dashCount) % 1;
+        // perspective: t=0 is horizon, t=1 is bottom
+        const pY = horizonY + (h - horizonY) * t * t; // quadratic for depth
+        const dashLen = 2 + t * 14;
+        const alpha = t * 0.7;
+        ctx.globalAlpha = alpha * brightness;
+        ctx.beginPath();
+        ctx.moveTo(vpX, pY);
+        ctx.lineTo(vpX, pY + dashLen);
+        ctx.stroke();
+    }
+    ctx.restore();
+
+    // ── Road edge lines ──
+    ctx.save();
+    ctx.strokeStyle = `rgba(255,255,255,${brightness * 0.08 + 0.02})`;
+    ctx.lineWidth = 1;
+    // Left edge
+    ctx.beginPath();
+    ctx.moveTo(vpX - 3, horizonY);
+    ctx.lineTo(w * 0.3, h);
+    ctx.stroke();
+    // Right edge
+    ctx.beginPath();
+    ctx.moveTo(vpX + 3, horizonY);
+    ctx.lineTo(w * 0.7, h);
+    ctx.stroke();
+    ctx.restore();
+
+    // ── Ground texture (horizontal depth lines) ──
+    ctx.strokeStyle = `rgba(255,255,255,${brightness * 0.04 + 0.01})`;
+    ctx.lineWidth = 0.5;
+    for (let i = 1; i <= 6; i++) {
+        const t = i / 7;
+        const y = horizonY + (h - horizonY) * t * t;
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+    }
+
+    // Horizon line
+    ctx.strokeStyle = `rgba(255,255,255,${brightness * 0.1 + 0.02})`;
+    ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.moveTo(0, horizonY); ctx.lineTo(w, horizonY); ctx.stroke();
+
+    // ── Trees (perspective-projected, both sides) ──
+    const alpha = Math.min(1, brightness * 1.5 + 0.1);
+    const gCol = Math.floor(brightness * 85 + 38);
+
+    treePositions.forEach(tree => {
+        const worldX = tree.x;
+        const dist = worldX - 80;
+        if (dist < 5 || dist > 520) return; // behind or too far
+
+        // depth factor: 0 = far (horizon), 1 = close (bottom)
+        const depthT = Math.max(0, Math.min(1, 1 - dist / 500));
+        const pY = horizonY + (h - horizonY) * depthT * depthT;
+        const scale = 0.15 + depthT * 0.85;
+
+        // Use the tree's stable side assignment
+        const side = tree.side;
+        const lateralBase = 60 + depthT * (w * 0.38);
+        const pX = vpX + side * lateralBase;
+
+        // smooth fade at edges (fade in when dist 5..60, fade out when dist 440..520)
+        let edgeFade = 1;
+        if (dist < 60) edgeFade = (dist - 5) / 55;
+        if (dist > 440) edgeFade = (520 - dist) / 80;
+        edgeFade = Math.max(0, Math.min(1, edgeFade));
+
+        const treeH = (50 + Math.sin(tree.seed * 17) * 12) * scale;
+        const trunkW = Math.max(2, 6 * scale);
+        const canopyR = Math.max(4, 20 * scale);
+        const treeAlpha = alpha * (0.3 + depthT * 0.7) * edgeFade;
+
+        // Trunk
+        ctx.fillStyle = `rgba(72,48,28,${treeAlpha})`;
+        ctx.beginPath();
+        ctx.roundRect(pX - trunkW / 2, pY - treeH * 0.5, trunkW, treeH * 0.5, 1);
+        ctx.fill();
+
+        // Canopy
+        ctx.beginPath();
+        ctx.arc(pX, pY - treeH * 0.5 - canopyR * 0.4, canopyR, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(20,${gCol},20,${treeAlpha * 0.7})`;
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(pX - canopyR * 0.15, pY - treeH * 0.5 - canopyR * 0.2, canopyR * 0.85, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(28,${gCol + 10},28,${treeAlpha})`;
+        ctx.fill();
+    });
+
+    // ── Dust / particles (POV version) ──
+    if (rwState.particlesEnabled) {
+        rwState.particles.forEach(p => {
+            const t = p.y / h;
+            ctx.save();
+            ctx.globalAlpha = p.alpha * brightness * (0.3 + t * 0.7);
+            ctx.fillStyle = '#c8e8ff';
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r * (0.5 + t), 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        });
+    }
+
+    // ── Subtle motion blur overlay when moving fast ──
+    if (speed > 1.0) {
+        const blurAlpha = Math.min(0.08, (speed - 1.0) * 0.025);
+        const blurGrad = ctx.createLinearGradient(0, h * 0.7, 0, h);
+        blurGrad.addColorStop(0, `rgba(180,200,220,0)`);
+        blurGrad.addColorStop(1, `rgba(180,200,220,${blurAlpha})`);
+        ctx.fillStyle = blurGrad;
+        ctx.fillRect(0, h * 0.7, w, h * 0.3);
+    }
+
+    // ── Subtle vignette (camera lens effect) ──
+    ctx.save();
+    const vigGrad = ctx.createRadialGradient(vpX, h * 0.5, w * 0.25, vpX, h * 0.5, w * 0.75);
+    vigGrad.addColorStop(0, 'rgba(0,0,0,0)');
+    vigGrad.addColorStop(1, 'rgba(0,0,0,0.25)');
+    ctx.fillStyle = vigGrad;
+    ctx.fillRect(0, 0, w, h);
+    ctx.restore();
 }
 
 function drawRobotWorld(brightness) {
@@ -531,10 +715,16 @@ function renderVisionFrame() {
             });
         }
 
-        treePositions = treePositions.map(x => {
-            let nx = x - robotDisplayVel;
-            if (nx < -35) nx = w + 65 + Math.random() * 100;
-            return nx;
+        treePositions = treePositions.map(tree => {
+            let nx = tree.x - robotDisplayVel;
+            if (nx < -35) {
+                return {
+                    x: w + 65 + Math.random() * 100,
+                    side: Math.random() < 0.5 ? -1 : 1,
+                    seed: Math.random()
+                };
+            }
+            return { ...tree, x: nx };
         });
     }
 
@@ -544,10 +734,10 @@ function renderVisionFrame() {
     if (currentMode === 'normal') {
         const noise = parseFloat(document.getElementById('noiseSlider').value) / 100;
 
-        // 1. Draw exactly what the robot sees into the vision context!
-        drawEnvironment(visionCtx, w, h, currentBrightness, true);
+        // 1. Draw first-person POV from robot's onboard camera
+        drawFirstPersonPOV(visionCtx, w, h, currentBrightness);
 
-        // 2. ONLY apply noise over top of it if noise > 0
+        // 2. Apply Gaussian noise over the scene if noise > 0
         if (noise > 0) {
             const imgData = visionCtx.getImageData(0, 0, w, h);
             const data = imgData.data;
@@ -560,7 +750,7 @@ function renderVisionFrame() {
             visionCtx.putImageData(imgData, 0, 0);
         }
 
-        // Overlay text
+        // Overlay HUD text
         visionCtx.fillStyle = 'rgba(0, 240, 255, 0.4)';
         visionCtx.font = '10px "JetBrains Mono", monospace';
         visionCtx.fillText(`FRAME ${frameCounter}`, 8, 16);
@@ -589,8 +779,9 @@ function renderVisionFrame() {
         visionCtx.fillText('Mean intensity < 5', w / 2, h / 2 + 22);
         visionCtx.textAlign = 'start';
 
-        // Corrupted: glitch effect applied over the real environment
-        drawEnvironment(visionCtx, w, h, currentBrightness, true);
+    } else if (currentMode === 'corrupted') {
+        // Corrupted: glitch effect applied over the first-person POV
+        drawFirstPersonPOV(visionCtx, w, h, currentBrightness);
 
         const imgData = visionCtx.getImageData(0, 0, w, h);
         const data = imgData.data;

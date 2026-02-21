@@ -94,7 +94,8 @@ function initCharts() {
 }
 
 function connectPlaygroundWs() {
-    const url = `ws://${location.host}/ws/playground`;
+    const wsProto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const url = `${wsProto}//${location.host}/ws/playground`;
     pgWs = new TrustWebSocket(url, onPlaygroundMessage, (connected) => {
         const dot = document.getElementById('pgWsDot');
         const text = document.getElementById('pgWsText');

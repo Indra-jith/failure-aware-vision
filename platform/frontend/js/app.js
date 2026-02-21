@@ -974,6 +974,12 @@ function resetSimulation() {
 
 // ── Source mode switching ──
 function setSourceMode(mode, btn) {
+    // Webcam is not available on cloud servers (no camera hardware)
+    if (mode === 'webcam' && window.location.protocol === 'https:') {
+        alert('Webcam is not available on the cloud server (no camera hardware).\\nPlease use "Video File" mode or run the app locally for webcam support.');
+        return;
+    }
+
     // Update button states
     document.querySelectorAll('.source-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');

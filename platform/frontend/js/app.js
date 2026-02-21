@@ -90,8 +90,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Chart
     chart = new TrustChart('timeSeriesChart');
 
-    // WebSocket
-    const wsUrl = `ws://${location.host}/ws`;
+    // WebSocket — auto-detect ws:// (local) vs wss:// (production HTTPS)
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${wsProtocol}//${window.location.host}/ws`;
     wsClient = new TrustWebSocket(wsUrl, onStateUpdate, onConnectionChange);
 
     // Start vision canvas animation
